@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Datos Urbanos - La Habana</title>
+    
+    <!-- Estilos de Leaflet para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { height: 100vh; width: 100vw; }
+        
+        /* Panel flotante de información */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        .info-panel h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
+        .info-panel p { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="info-panel">
+        <h1>Infraestructura Urbana</h1>
+        <p>Capa espacial de la provincia de La Habana cargada en tiempo real desde PostGIS (Neon).</p>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Script de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // 1. Inicializar el mapa centrado en las coordenadas aproximadas de La Habana
+        const map = L.map('map').setView([23.05, -82.40], 11);
+
+        // 2. Añadir un mapa base con diseño urbano (CartoDB Positron)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(map);
+
+        // 3. Tu URL real del servidor de datos en Render
+        const urlAPI = 'https://servidor-mapas.onrender.com/api/mapa';
+
+        // 4. Consumir tu API de Render usando Fetch
+        fetch(urlAPI)
+            .then(response => {
+                if (!response.ok) throw new Error('Error al conectar con el servidor de datos');
+                return response.json();
+            })
+            .then(data => {
+                // 5. Pintar el GeoJSON en el mapa con un estilo estilizado azul para Smart Cities
+                const capaGeografica = L.geoJSON(data, {
+                    style: {
+                        color: '#2563eb',       // Color del borde (azul moderno)
+                        weight: 2,              // Grosor del borde
+                        opacity: 0.8,
+                        fillColor: '#3b82f6',   // Color de relleno
+                        fillOpacity: 0.2        // Transparencia del relleno
+                    },
+                    onEachFeature: function (feature, layer) {
+                        // Si tu capa tiene atributos guardados de QGIS, saldrán al hacer clic
+                        let popupContenido = `<strong>ID Objeto:</strong> ${feature.id || 'N/A'}`;
+                        layer.bindPopup(popupContenido);
+                    }
+                }).addTo(map);
+
+                // Ajustar la cámara automáticamente para enfocar perfectamente la provincia
+                map.fitBounds(capaGeografica.getBounds());
+            })
+            .catch(error => {
+                console.error('Error cargando la capa SIG:', error);
+                alert('No se pudo cargar la capa espacial. Revisa la consola o el estado de Render.');
+            });
+    </script>
+</body>
+</html>
