@@ -18,10 +18,10 @@ app.get('/', (req, res) => {
   res.send('🌍 El servidor de mapas está en línea y conectado a Neon.');
 });
 
-// RUTA CRUCIAL: Devuelve tu provincia en formato GeoJSON para tu mapa web
+// RUTA CRUCIAL: Devuelve tu provincia en formato GeoJSON para tu mapa web (Coordenadas Web EPSG:4326)
 app.get('/api/mapa', async (req, res) => {
   try {
-    // Consulta corregida con la tabla Lahabanap, y columnas fid y geom
+    // Usamos ST_Transform(geom, 4326) para convertir UTM (32617) a Latitud/Longitud estándar de la web
     const queryText = `
       SELECT jsonb_build_object(
         'type', 'FeatureCollection',
@@ -30,7 +30,7 @@ app.get('/api/mapa', async (req, res) => {
         SELECT jsonb_build_object(
           'type', 'Feature',
           'id', fid,
-          'geometry', ST_AsGeoJSON(geom)::jsonb,
+          'geometry', ST_AsGeoJSON(ST_Transform(geom, 4326))::jsonb,
           'properties', to_jsonb(inputs) - 'geom'
         ) AS feature
         FROM (SELECT * FROM public.provincia_lahabana) inputs
@@ -39,7 +39,6 @@ app.get('/api/mapa', async (req, res) => {
 
     const result = await pool.query(queryText);
     
-    // Permitir que cualquier página web consulte este mapa (CORS básico)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.json(result.rows[0].jsonb_build_object);
 
