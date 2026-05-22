@@ -33,7 +33,7 @@ app.get('/api/mapa', async (req, res) => {
           'geometry', ST_AsGeoJSON(geo)::jsonb,
           'properties', to_jsonb(inputs) - 'geo'
         ) AS feature
-        FROM (SELECT * FROM public.Lahabanap) inputs
+        FROM (SELECT * FROM public.provincia_lahabana) inputs
       ) features;
     `;
 
