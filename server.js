@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 // RUTA CRUCIAL: Devuelve tu provincia en formato GeoJSON para tu mapa web
 app.get('/api/mapa', async (req, res) => {
   try {
-    // Consulta corregida con la tabla Lahabanap, y columnas fid y geo
+    // Consulta corregida con la tabla Lahabanap, y columnas fid y geom
     const queryText = `
       SELECT jsonb_build_object(
         'type', 'FeatureCollection',
@@ -30,7 +30,7 @@ app.get('/api/mapa', async (req, res) => {
         SELECT jsonb_build_object(
           'type', 'Feature',
           'id', fid,
-          'geometry', ST_AsGeoJSON(geo)::jsonb,
+          'geometry', ST_AsGeoJSON(geom)::jsonb,
           'properties', to_jsonb(inputs) - 'geom'
         ) AS feature
         FROM (SELECT * FROM public.provincia_lahabana) inputs
