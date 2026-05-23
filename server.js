@@ -1,4 +1,4 @@
-const express = require('express');
+const patch = require('path');
 const { Pool } = require('pg');
 
 const app = express();
@@ -18,34 +18,12 @@ app.get('/', (req, res) => {
   res.send('🌍 El servidor de mapas está en línea y conectado a Neon.');
 });
 
-// RUTA CRUCIAL: Devuelve tu provincia en formato GeoJSON para tu mapa web (Coordenadas Web EPSG:4326)
-app.get('/api/mapa', async (req, res) => {
-  try {
-    // Usamos ST_Transform(geom, 4326) para convertir UTM (32617) a Latitud/Longitud estándar de la web
-    const queryText = `
-      SELECT jsonb_build_object(
-        'type', 'FeatureCollection',
-        'features', jsonb_agg(feature)
-      ) FROM (
-        SELECT jsonb_build_object(
-          'type', 'Feature',
-          'id', fid,
-          'geometry', ST_AsGeoJSON(ST_Transform(geom, 4326))::jsonb,
-          'properties', to_jsonb(inputs) - 'geom'
-        ) AS feature
-        FROM (SELECT * FROM public.provincia_lahabana) inputs
-      ) features;
-    `;
+// Servir los archivos estáticos de la carpeta 'public' (como el index.html)
+app.use(express.static(path.join(__dirname, 'public')));
 
-    const result = await pool.query(queryText);
-    
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.json(result.rows[0].jsonb_build_object);
-
-  } catch (err) {
-    console.error('Error al consultar el mapa en Neon:', err);
-    res.status(500).json({ error: 'Error interno del servidor al cargar el mapa' });
-  }
+// Al entrar a la raíz, enviar el mapa interactivo
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Arrancar el servidor
