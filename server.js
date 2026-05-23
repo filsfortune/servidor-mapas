@@ -31,5 +31,29 @@ app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
 
+app.get('/api/municipios', async (req, res) => {
+  try {
+    // La función ST_AsGeoJSON hace la magia de convertir el GPKG de la base de datos a web
+    const result = await pool.query(`
+      SELECT nombre, ST_AsGeoJSON(geom)::json as geometry 
+      FROM municipios
+    `);
+
+    const geojson = {
+      type: "FeatureCollection",
+      features: result.rows.map(row => ({
+        type: "Feature",
+        properties: { nombre: row.nombre },
+        geometry: row.geometry
+      }))
+    };
+
+    res.json(geojson);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
 // CRUCIAL PARA VERCEL: Exportamos la aplicación
 module.exports = app;
