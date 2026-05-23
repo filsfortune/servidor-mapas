@@ -43,8 +43,8 @@ app.get('/api/mapa', async (req, res) => {
 // 3. NUEVA RUTA: MUNICIPIOS (Para leer La Lisa y los que agregues)
 app.get('/api/municipios', async (req, res) => {
   try {
-    // Consultamos el nombre y la geometría convertida a GeoJSON
-    const result = await pool.query('SELECT nombre, ST_AsGeoJSON(geom)::json as geometry FROM municipios');
+    // Consultamos el id y la geometría convertida a GeoJSON
+    const result = await pool.query('SELECT id, ST_AsGeoJSON(geom)::json as geometry FROM municipios');
     
     const geojson = {
       type: "FeatureCollection",
