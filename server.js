@@ -1,15 +1,19 @@
 const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
+const cors = require('cors'); // 1. REQUERIR EL PAQUETE CORS (Añade esta línea)
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 2. HABILITAR CORS PARA CUALQUIER ORIGEN (Añade esta línea crucial)
+app.use(cors()); 
 
 // Configuración de la conexión a Neon usando la variable de entorno
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Requerido para conexiones seguras con Neon/Render
+    rejectUnauthorized: false
   }
 });
 
