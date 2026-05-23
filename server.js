@@ -24,7 +24,7 @@ app.get('/', (req, res) => {
 // 2. RUTA DE LA PROVINCIA (La que ya te funciona)
 app.get('/api/mapa', async (req, res) => {
   try {
-    const result = await pool.query('SELECT ST_AsGeoJSON(geom)::json as geometry FROM provincia');
+    const result = await pool.query('SELECT ST_AsGeoJSON(geom)::json as geometry FROM provincia_lahabana');
     const geojson = {
       type: "FeatureCollection",
       features: result.rows.map(row => ({
