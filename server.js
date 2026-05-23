@@ -1,8 +1,8 @@
-const patch = require('path');
+const express = require('express');
+const path = require('path');
 const { Pool } = require('pg');
 
 const app = express();
-// Render nos asignará un puerto automático, si no, usamos el 3000 localmente
 const PORT = process.env.PORT || 3000;
 
 // Configuración de la conexión a Neon usando la variable de entorno
@@ -13,47 +13,60 @@ const pool = new Pool({
   }
 });
 
-// Ruta principal de prueba
+// Servir los archivos estáticos de la carpeta principal (raíz) o public si tienes estilos
+app.use(express.static(path.join(__dirname, './')));
+
+// 1. Ruta principal de prueba
 app.get('/', (req, res) => {
   res.send('🌍 El servidor de mapas está en línea y conectado a Neon.');
 });
 
-// Servir los archivos estáticos de la carpeta 'public' (como el index.html)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Al entrar a la raíz, enviar el mapa interactivo
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
-
-app.get('/api/municipios', async (req, res) => {
+// 2. RUTA DE LA PROVINCIA (La que ya te funciona)
+app.get('/api/mapa', async (req, res) => {
   try {
-    // La función ST_AsGeoJSON hace la magia de convertir el GPKG de la base de datos a web
-    const result = await pool.query(`
-      SELECT nombre, ST_AsGeoJSON(geom)::json as geometry 
-      FROM municipios
-    `);
-
+    const result = await pool.query('SELECT ST_AsGeoJSON(geom)::json as geometry FROM provincia');
     const geojson = {
       type: "FeatureCollection",
       features: result.rows.map(row => ({
         type: "Feature",
-        properties: { nombre: row.nombre },
-        geometry: row.geometry
+        geometry: row.geometry,
+        properties: {}
       }))
     };
-
     res.json(geojson);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error en el servidor" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// CRUCIAL PARA VERCEL: Exportamos la aplicación
+// 3. NUEVA RUTA: MUNICIPIOS (Para leer La Lisa y los que agregues)
+app.get('/api/municipios', async (req, res) => {
+  try {
+    // Consultamos el nombre y la geometría convertida a GeoJSON
+    const result = await pool.query('SELECT nombre, ST_AsGeoJSON(geom)::json as geometry FROM municipios');
+    
+    const geojson = {
+      type: "FeatureCollection",
+      features: result.rows.map(row => ({
+        type: "Feature",
+        geometry: row.geometry,
+        properties: {
+          nombre: row.nombre // Guardamos el nombre para que Leaflet lo lea
+        }
+      }))
+    };
+    res.json(geojson);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Levantar el servidor
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
+});
+
+// Exportamos la aplicación para compatibilidad
 module.exports = app;
