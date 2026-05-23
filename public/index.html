@@ -45,66 +45,88 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. Inicializar el mapa centrado en las coordenadas aproximadas de La Habana
-        const map = L.map('map').setView([23.05, -82.40], 11);
+      // 1. Inicializar el mapa centrado de forma general
+const map = L.map('map').setView([23.05, -82.40], 11);
 
-        // 2. Añadir un mapa base con diseño urbano (CartoDB Positron)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+// 2. Añadir el mapa base de OpenStreetMap
+const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '© OpenStreetMap'
 }).addTo(map);
 
-        // 3. Tu URL real del servidor de datos en Render
-        const urlAPI = 'https://servidor-mapas.onrender.com/api/mapa';
+// ========================================================
+// CONTENEDORES DE CAPAS (Grupos lógicos)
+// ========================================================
+const grupoProvincia = L.layerGroup().addTo(map); // Se enciende por defecto
+const grupoMunicipios = L.layerGroup().addTo(map); // Se enciende por defecto
 
-        // 4. Consumir tu API de Render usando Fetch
-        fetch(urlAPI)
-            .then(response => {
-                if (!response.ok) throw new Error('Error al conectar con el servidor de datos');
-                return response.json();
-            })
-            .then(data => {
-                // 5. Pintar el GeoJSON en el mapa con un estilo estilizado azul para Smart Cities
-                const capaGeografica = L.geoJSON(data, {
-                    style: {
-                        color: '#2563eb',       // Color del borde (azul moderno)
-                        weight: 2,              // Grosor del borde
-                        opacity: 0.8,
-                        fillColor: '#3b82f6',   // Color de relleno
-                        fillOpacity: 0.2        // Transparencia del relleno
-                    },
-                    onEachFeature: function (feature, layer) {
-                        // Si tu capa tiene atributos guardados de QGIS, saldrán al hacer clic
-                        let popupContenido = `<strong>ID Objeto:</strong> ${feature.id || 'N/A'}`;
-                        layer.bindPopup(popupContenido);
-                    }
-                }).addTo(map);
+// ========================================================
+// 3. CARGAR PROVINCIA (Color Azul Moderno)
+// ========================================================
+const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
 
-                // Ajustar la cámara automáticamente para enfocar perfectamente la provincia
-                map.fitBounds(capaGeografica.getBounds());
-            })
-            .catch(error => {
-                console.error('Error cargando la capa SIG:', error);
-                alert('No se pudo cargar la capa espacial. Revisa la consola o el estado de Render.');
-            });
+fetch(urlProvincia)
+    .then(response => {
+        if (!response.ok) throw new Error('Error al cargar provincia');
+        return response.json();
+    })
+    .then(data => {
+        const capaProvincia = L.geoJSON(data, {
+            style: {
+                color: '#2563eb',       // Borde azul
+                weight: 3,              // Borde más grueso por ser el límite mayor
+                opacity: 0.9,
+                fillColor: '#3b82f6',   // Relleno azul
+                fillOpacity: 0.15       // Más transparente para dejar ver el fondo
+            },
+            onEachFeature: function (feature, layer) {
+                layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
+            }
+        }).addTo(grupoProvincia);
 
-            // Llamada limpia a los municipios
-fetch('https://tu-servidor-render.onrender.com/api/municipios')
-    .then(res => res.json())
+        // Ajustar la cámara para que encuadre todo perfectamente al iniciar
+        map.fitBounds(capaProvincia.getBounds());
+    })
+    .catch(error => console.error('Error cargando provincia:', error));
+
+// ========================================================
+// 4. CARGAR MUNICIPIOS - LA LISA (Color Naranja Vibrante)
+// ========================================================
+const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
+
+fetch(urlMunicipios)
+    .then(response => {
+        if (!response.ok) throw new Error('Error al cargar municipios');
+        return response.json();
+    })
     .then(data => {
         L.geoJSON(data, {
             style: {
-                color: '#ff5500', // Color para los municipios
-                weight: 2,
-                fillOpacity: 0.3
+                color: '#ea580c',       // Borde naranja encendido
+                weight: 2,              // Borde intermedio
+                opacity: 0.9,
+                fillColor: '#f97316',   // Relleno naranja
+                fillOpacity: 0.4        // Un poco más opaco para que resalte el municipio
             },
             onEachFeature: function (feature, layer) {
-                if (feature.properties && feature.properties.nombre) {
-                    layer.bindPopup(`<b>Municipio:</b> ${feature.properties.nombre}`);
-                }
+                // Si el GeoJSON trae el nombre desde Neon, lo mostramos; si no, ponemos La Lisa por defecto
+                let nombreMuni = (feature.properties && feature.properties.nombre) ? feature.properties.nombre : 'La Lisa';
+                layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`);
             }
-        }).addTo(map);
-    });
+        }).addTo(grupoMunicipios);
+    })
+    .catch(error => console.error('Error cargando municipios:', error));
+
+// ========================================================
+// 5. CONTROL DE CAPAS INTERACTIVO (Arriba a la derecha)
+// ========================================================
+const capasVisuales = {
+    "Límite Provincial": grupoProvincia,
+    "División Municipal (La Lisa)": grupoMunicipios
+};
+
+// Añade el panel interactivo flotante al mapa
+L.control.layers(null, capasVisuales, { collapsed: false }).addTo(map);
     </script>
 </body>
 </html>
