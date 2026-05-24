@@ -34,8 +34,8 @@
 <body>
 
     <div class="info-panel">
-        <h1>Infraestructura Urbana</h1>
-        <p>Capa espacial de la provincia de La Habana cargada en tiempo real desde PostGIS (Neon).</p>
+        <h1>Mapa de La Habana</h1>
+        <p>Municipios</p>
     </div>
 
     <div id="map"></div>
@@ -43,8 +43,16 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. Inicializar el mapa centrado en La Habana
-        const map = L.map('map').setView([23.05, -82.40], 11);
+        // 1. Inicializar el mapa SIN los botones de zoom por defecto (zoomControl: false)
+const map = L.map('map', {
+    zoomControl: false 
+}).setView([23.05, -82.40], 11);
+
+// Ahora añadimos los botones de zoom manualmente en otra posición
+// Opciones listas para usar: 'topleft', 'topright', 'bottomleft', 'bottomright'
+L.control.zoom({
+    position: 'bottomleft' // Al ponerlo abajo a la izquierda, deja libre tu panel de arriba
+}).addTo(map);
 
         // 2. Añadir el mapa base de OpenStreetMap
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
