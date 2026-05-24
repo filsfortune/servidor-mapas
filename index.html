@@ -34,7 +34,7 @@
         .info-panel p { font-size: 12px; color: #666; }
 
         /* ========================================================
-           🔴 NUEVO CSS: DISEÑO RESPONSIVO PARA EL BOTÓN PLUS
+            🔴 CSS INTEGRADO: DISEÑO RESPONSIVO DEL BOTÓN PLUS
            ======================================================== */
         
         /* Estilo del botón flotante "+" abajo a la derecha */
@@ -105,8 +105,8 @@
 <body>
 
     <div class="info-panel">
-        <h1></h1>
-        <p></p>
+        <h1>Mapa de La Habana</h1>
+        <p>Municipios</p>
     </div>
 
     <div id="map"></div>
@@ -222,7 +222,7 @@
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
-                // CONSTRUCCIÓN DEL CONTROL DE CAPAS ORIGINAL
+                // CONSTRUCCIÓN DEL CONTROL DE CAPAS (Una sola vez)
                 const listaControles = {
                     "Límite Provincial": grupoProvincia
                 };
@@ -231,40 +231,33 @@
                     listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
                 }
 
-                // Desplegamos el control nativo totalmente abierto tal como estaba
-                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-                console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
-
-   // Desplegamos el control nativo totalmente abierto tal como estaba
+                // 🟢 SE CREA EL CONTROL UNA SOLA VEZ AQUÍ
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
                 console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
 
                 // ========================================================
-                // 🟢 REEMPLAZO DEFINITIVO: ACTIVADOR INMANIBLE DEL BOTÓN PLUS
+                // 🟢 UNIFICADO: ACTIVADOR INMANIBLE DEL BOTÓN PLUS
                 // ========================================================
                 function activarBotonMovil() {
                     const menuOriginal = document.querySelector('.leaflet-control-layers');
                     const botonPlus = document.getElementById('btn-toggle-capas');
                     
                     if (!menuOriginal || !botonPlus) {
-                        // Si aún no se ha dibujado en la pantalla, reintentar en 50 milisegundos
                         setTimeout(activarBotonMovil, 50);
                         return;
                     }
 
-                    console.log("¡Menú de Leaflet detectado y enlazado con el botón Plus!");
-
-                    // Desactivar que el mapa interfiera con el menú y el botón
+                    // Escudo nativo de Leaflet para aislar los clics táctiles
                     L.DomEvent.disableClickPropagation(botonPlus);
                     L.DomEvent.disableClickPropagation(menuOriginal);
                     L.DomEvent.disableScrollPropagation(menuOriginal);
 
-                    // Forzar ocultamiento inicial si es móvil
+                    // Forzar ocultamiento inicial si se visualiza en móvil
                     if (window.innerWidth < 768) {
                         menuOriginal.classList.add('menu-escondido');
                     }
                     
-                    // Evento al hacer clic en el botón
+                    // Acción al presionar el botón Plus/Cerrar
                     botonPlus.onclick = function(e) {
                         if (e) e.stopPropagation();
                         
@@ -279,7 +272,7 @@
                         }
                     };
 
-                    // Ocultar al tocar el mapa
+                    // Esconder automáticamente al interactuar directamente con el mapa
                     map.on('click', function() {
                         if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
                             menuOriginal.classList.add('menu-escondido');
@@ -289,9 +282,7 @@
                     });
                 }
 
-                // Arrancamos la busqueda del menú inmediatamente
                 activarBotonMovil();
-
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
