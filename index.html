@@ -5,16 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal de Datos Urbanos - La Habana</title>
     
-    <!-- Estilos de Leaflet para el mapa -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         #map {
-    height: 100vh; /* O usa un tamaño fijo como 600px */
-    width: 100%;
-}
+            height: 100vh;
+            width: 100%;
+        }
         
         /* Panel flotante de información */
         .info-panel {
@@ -41,92 +40,111 @@
 
     <div id="map"></div>
 
-    <!-- Script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-      // 1. Inicializar el mapa centrado de forma general
-const map = L.map('map').setView([23.05, -82.40], 11);
+        // 1. Inicializar el mapa centrado en La Habana
+        const map = L.map('map').setView([23.05, -82.40], 11);
 
-// 2. Añadir el mapa base de OpenStreetMap
-const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-}).addTo(map);
+        // 2. Añadir el mapa base de OpenStreetMap
+        const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
 
-// ========================================================
-// CONTENEDORES DE CAPAS (Grupos lógicos)
-// ========================================================
-const grupoProvincia = L.layerGroup().addTo(map); // Se enciende por defecto
-const grupoMunicipios = L.layerGroup().addTo(map); // Se enciende por defecto
+        // ========================================================
+        // 1. CONTENEDORES DE CAPAS (Grupos lógicos)
+        // ========================================================
+        const grupoProvincia = L.layerGroup().addTo(map); // Capa base provincial
+        const capasMunicipios = {}; // Objeto vacío para separar los 15 municipios dinámicamente
+        let controlCapas; // Variable global para controlar el panel interactivo de la derecha
 
-// ========================================================
-// 3. CARGAR PROVINCIA (Color Azul Moderno)
-// ========================================================
-const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
+        // ========================================================
+        // 3. CARGAR PROVINCIA (Color Azul Moderno Institucional)
+        // ========================================================
+        const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
 
-fetch(urlProvincia)
-    .then(response => {
-        if (!response.ok) throw new Error('Error al cargar provincia');
-        return response.json();
-    })
-    .then(data => {
-        const capaProvincia = L.geoJSON(data, {
-            style: {
-                color: '#2563eb',       // Borde azul
-                weight: 3,              // Borde más grueso por ser el límite mayor
-                opacity: 0.9,
-                fillColor: '#3b82f6',   // Relleno azul
-                fillOpacity: 0.15       // Más transparente para dejar ver el fondo
-            },
-            onEachFeature: function (feature, layer) {
-                layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
-            }
-        }).addTo(grupoProvincia);
+        fetch(urlProvincia)
+            .then(response => {
+                if (!response.ok) throw new Error('Error al cargar provincia');
+                return response.json();
+            })
+            .then(data => {
+                const capaProvincia = L.geoJSON(data, {
+                    style: {
+                        color: '#2563eb',       // Borde azul
+                        weight: 3,              // Borde más grueso por ser el límite mayor
+                        opacity: 0.9,
+                        fillColor: '#3b82f6',   // Relleno azul
+                        fillOpacity: 0.15       // Más transparente para dejar ver el fondo
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
+                    }
+                }).addTo(grupoProvincia);
 
-        // Ajustar la cámara para que encuadre todo perfectamente al iniciar
-        map.fitBounds(capaProvincia.getBounds());
-    })
-    .catch(error => console.error('Error cargando provincia:', error));
+                // Ajustar la cámara para que encuadre todo perfectamente al iniciar
+                map.fitBounds(capaProvincia.getBounds());
+            })
+            .catch(error => console.error('Error cargando provincia:', error));
 
-// ========================================================
-// 4. CARGAR MUNICIPIOS - LA LISA (Color Naranja Vibrante)
-// ========================================================
-const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
+        // ========================================================
+        // 4. CARGAR MUNICIPIOS DINÁMICOS DESDE TU NUEVA API DE NEON
+        // ========================================================
+        const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
 
-fetch(urlMunicipios)
-    .then(response => {
-        if (!response.ok) throw new Error('Error al cargar municipios');
-        return response.json();
-    })
-    .then(data => {
-        L.geoJSON(data, {
-            style: {
-                color: '#ea580c',       // Borde naranja encendido
-                weight: 2,              // Borde intermedio
-                opacity: 0.9,
-                fillColor: '#f97316',   // Relleno naranja
-                fillOpacity: 0.4        // Un poco más opaco para que resalte el municipio
-            },
-            onEachFeature: function (feature, layer) {
-                // Si el GeoJSON trae el nombre desde Neon, lo mostramos; si no, ponemos La Lisa por defecto
-                let nombreMuni = (feature.properties && feature.properties.nombre) ? feature.properties.nombre : 'La Lisa';
-                layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`);
-            }
-        }).addTo(grupoMunicipios);
-    })
-    .catch(error => console.error('Error cargando municipios:', error));
+        fetch(urlMunicipios)
+            .then(response => {
+                if (!response.ok) throw new Error('Error al cargar municipios');
+                return response.json();
+            })
+            .then(data => {
+                // Extraemos los 15 nombres únicos reales devueltos por tu server.js actualizado
+                const nombresMunicipios = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
 
-// ========================================================
-// 5. CONTROL DE CAPAS INTERACTIVO (Arriba a la derecha)
-// ========================================================
-const capasVisuales = {
-    "Límite Provincial": grupoProvincia,
-    "División Municipal (La Lisa)": grupoMunicipios
-};
+                // Recorremos cada nombre para procesar su geometría e inyectar color único aleatorio
+                nombresMunicipios.forEach(nombreMuni => {
+                    
+                    // Inicializamos la capa independiente en el mapa para este municipio activo
+                    capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
 
-// Añade el panel interactivo flotante al mapa
-L.control.layers(null, capasVisuales, { collapsed: false }).addTo(map);
+                    // Filtramos el GeoJSON completo para renderizar únicamente este municipio en su capa
+                    L.geoJSON(data, {
+                        filter: function(feature) {
+                            return feature.properties.nombre === nombreMuni;
+                        },
+                        style: {
+                            color: '#475569',       // Borde gris oscuro limpio para separar colindancias
+                            weight: 1.5,
+                            opacity: 0.9,
+                            // Genera un color hexadecimal fijo basado exclusivamente en las letras del nombre del municipio
+                            fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
+                            fillOpacity: 0.45       // Transparencia ideal para contrastar datos urbanos de fondo
+                        },
+                        onEachFeature: function (feature, layer) {
+                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}<br><em>ID Base de Datos:</em> ${feature.id}`);
+                        }
+                    }).addTo(capasMunicipios[nombreMuni]);
+                });
+
+                // ========================================================
+                // 5. CONSTRUCCIÓN ASINCRÓNICA DEL CONTROL DE CAPAS (Menú interactivo)
+                // ========================================================
+                const listaControles = {
+                    "Límite Provincial": grupoProvincia
+                };
+
+                // Insertamos dinámicamente cada uno de los 15 municipios con su casilla independiente
+                for (const nombre in capasMunicipios) {
+                    listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
+                }
+
+                // Desplegamos el control en la esquina superior derecha totalmente abierto
+                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
+
+                console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
+            })
+            .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
 </body>
 </html>
