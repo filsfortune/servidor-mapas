@@ -102,68 +102,62 @@ const capasMunicipios = {};
 // ========================================================
 const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
 
+// Objeto global donde guardaremos las capas de cada municipio
+const capasMunicipios = {}; 
+let controlCapas; // Variable global para el panel de la derecha
+
 fetch(urlMunicipios)
     .then(response => {
         if (!response.ok) throw new Error('Error al cargar municipios');
         return response.json();
     })
     .then(data => {
-        // 1. Primero, identificamos todos los nombres únicos que vienen de Neon
+        // 1. Extraemos todos los nombres únicos que guardaste en QGIS/Neon
         const nombresMunicipios = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
 
-        // 2. Para cada municipio encontrado, creamos su propia capa independiente
+        // 2. Creamos una capa independiente para cada municipio encontrado
         nombresMunicipios.forEach(nombreMuni => {
             
-            // Creamos el grupo de mapa para este municipio específico y lo encendemos por defecto
+            // Creamos el grupo de mapa para este municipio y lo encendemos de inicio
             capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
 
-            // Filtramos el GeoJSON para pintar SOLAMENTE este municipio en su capa
+            // Filtramos el GeoJSON para meter en este grupo SOLO los polígonos de este municipio
             L.geoJSON(data, {
                 filter: function(feature) {
                     return feature.properties.nombre === nombreMuni;
                 },
                 style: {
-                    color: '#ea580c',       // Línea del límite municipal (Naranja oscuro)
-                    weight: 2,              // Grosor del límite
+                    color: '#ea580c',       // Borde naranja oscuro para marcar el límite
+                    weight: 2,              // Grosor de la línea de división
                     fillColor: '#f97316',   // Relleno naranja
-                    fillOpacity: 0.35       // Transparencia para ver las calles de fondo
+                    fillOpacity: 0.35       // Transparencia perfecta para ver las calles
                 },
                 onEachFeature: function (feature, layer) {
-                    // Le ponemos su etiqueta flotante al hacer clic
+                    // Mensaje emergente al hacer clic
                     layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`);
                 }
             }).addTo(capasMunicipios[nombreMuni]);
         });
 
-        // 3. ¡Construimos el Panel de Control Dinámico!
-        actualizarControlDeCapas();
+        // ========================================================
+        // 5. CONSTRUIR EL PANEL DE CONTROL (Justo aquí adentro)
+        // ========================================================
+        // Preparamos la lista de controles empezando por la Provincia
+        const listaControles = {
+            "Límite Provincial": grupoProvincia
+        };
+
+        // Recorremos nuestro objeto de capas y metemos cada municipio con su nombre real
+        for (const nombre in capasMunicipios) {
+            listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
+        }
+
+        // Creamos el panel flotante blanco en la esquina superior derecha con la lista completa
+        controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
+
+        console.log("¡Panel de control generado con éxito para los municipios:", nombresMunicipios);
     })
     .catch(error => console.error('Error cargando la división municipal:', error));
-
-// ========================================================
-// 5. CONTROL DE CAPAS INTERACTIVO
-// ========================================================
-let controlCapas;
-
-function actualizarControlDeCapas() {
-    // Si ya existía un panel viejo, lo borramos para no duplicar los botones
-    if (controlCapas) {
-        map.removeControl(controlCapas);
-    }
-
-    // Ponemos la base: la Provincia
-    const listaControles = {
-        "Límite Provincial": grupoProvincia
-    };
-
-    // Le metemos al menú cada municipio con su nombre real de forma automática
-    for (const nombre in capasMunicipios) {
-        listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
-    }
-
-    // Pintamos el panel flotante blanco en la esquina superior derecha
-    controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-}
     </script>
 </body>
 </html>
