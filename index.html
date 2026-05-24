@@ -236,42 +236,45 @@
                 console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
 
                 // ========================================================
-                // 🟢 NUEVO JAVASCRIPT: LOGICA DE APERTURA / CIERRE
-                // ========================================================
-                // Buscamos el menú generado dinámicamente justo aquí adentro, cuando ya existe
-                const menuOriginal = document.querySelector('.leaflet-control-layers');
-                const botonPlus = document.getElementById('btn-toggle-capas');
-                
-                if (menuOriginal && botonPlus) {
-                    // Si el usuario entra desde un iPhone/móvil, ocultamos el menú inicialmente
-                    if (window.innerWidth < 768) {
-                        menuOriginal.classList.add('menu-escondido');
-                    }
-                    
-                    // Manejador del evento clic en el botón Plus
-                    botonPlus.addEventListener('click', function(e) {
-                        e.stopPropagation(); // Evitamos que el mapa se mueva o reciba un clic fantasma
-                        menuOriginal.classList.toggle('menu-escondido');
-                        
-                        // Cambiamos el diseño y texto del botón según el estado del panel
-                        if (menuOriginal.classList.contains('menu-escondido')) {
-                            botonPlus.innerText = '+';
-                            botonPlus.style.backgroundColor = '#007aff'; // Azul iOS
-                        } else {
-                            botonPlus.innerText = '✕';
-                            botonPlus.style.backgroundColor = '#ff3b30'; // Rojo iOS para cerrar
-                        }
-                    });
+// 🟢 JAVASCRIPT CORREGIDO: LOGICA DE APERTURA / CIERRE CON ESCUDO DE LEAFLET
+// ========================================================
+const menuOriginal = document.querySelector('.leaflet-control-layers');
+const botonPlus = document.getElementById('btn-toggle-capas');
 
-                    // Si el usuario toca el mapa directamente, escondemos el menú para limpiar pantalla
-                    map.on('click', function() {
-                        if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
-                            menuOriginal.classList.add('menu-escondido');
-                            botonPlus.innerText = '+';
-                            botonPlus.style.backgroundColor = '#007aff';
-                        }
-                    });
-                }
+if (menuOriginal && botonPlus) {
+    // 1. BLINDAJE CRÍTICO: Evita que Leaflet robe el clic en pantallas táctiles
+    L.DomEvent.disableClickPropagation(botonPlus);
+    L.DomEvent.disableClickPropagation(menuOriginal);
+
+    // Si el usuario entra desde un dispositivo móvil, ocultamos el menú inicialmente
+    if (window.innerWidth < 768) {
+        menuOriginal.classList.add('menu-escondido');
+    }
+    
+    // Manejador del evento clic/toque en el botón Plus
+    botonPlus.addEventListener('click', function(e) {
+        // Alternamos la clase para mostrar o esconder
+        menuOriginal.classList.toggle('menu-escondido');
+        
+        // Cambiamos el diseño y texto del botón según el estado del panel
+        if (menuOriginal.classList.contains('menu-escondido')) {
+            botonPlus.innerText = '+';
+            botonPlus.style.backgroundColor = '#007aff'; // Azul iOS
+        } else {
+            botonPlus.innerText = '✕';
+            botonPlus.style.backgroundColor = '#ff3b30'; // Rojo iOS para cerrar
+        }
+    });
+
+    // Si el usuario toca el mapa directamente en una zona vacía, escondemos el menú
+    map.on('click', function() {
+        if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
+            menuOriginal.classList.add('menu-escondido');
+            botonPlus.innerText = '+';
+            botonPlus.style.backgroundColor = '#007aff';
+        }
+    });
+}
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
