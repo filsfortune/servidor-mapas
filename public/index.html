@@ -126,23 +126,20 @@
                 });
 
                 // ========================================================
-                // 5. CONSTRUCCIÓN ASINCRÓNICA DEL CONTROL DE CAPAS
-                // ========================================================
-                const listaControles = {
-                    "Límite Provincial": grupoProvincia
-                };
+// 5. CONSTRUCCIÓN ASINCRÓNICA DEL CONTROL DE CAPAS
+// ========================================================
+const listaControles = {
+    "Límite Provincial": grupoProvincia
+};
 
-                // Insertamos dinámicamente cada uno de los 15 municipios con su checkbox independiente
-                for (const nombre in capasMunicipios) {
-                    listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
-                }
+// Insertamos dinámicamente cada uno de los 15 municipios con su checkbox independiente
+for (const nombre in capasMunicipios) {
+    listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
+}
 
-                // Desplegamos el control en la esquina superior derecha totalmente abierto (collapsed: false)
-                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-
-                console.log("¡Panel de control urbano configurado con los 15 municipios!");
-            })
-            .catch(error => console.error('Error cargando la división municipal:', error));
+// Desplegamos el control en la esquina superior derecha totalmente abierto (collapsed: false)
+controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
+               
     </script>
 </body>
 </html>
