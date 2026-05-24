@@ -7,6 +7,8 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.css">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -33,11 +35,7 @@
         .info-panel h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
         .info-panel p { font-size: 12px; color: #666; }
 
-        /* ========================================================
-            🔴 CSS INTEGRADO: DISEÑO RESPONSIVO DEL BOTÓN PLUS
-           ======================================================== */
-        
-        /* Estilo del botón flotante "+" abajo a la derecha */
+        /* DISEÑO RESPONSIVO DEL BOTÓN PLUS */
         .boton-plus-movil {
             position: absolute;
             bottom: 25px;
@@ -45,13 +43,13 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background-color: #007aff; /* Azul nativo de iOS */
+            background-color: #007aff; 
             color: white;
             font-size: 28px;
             font-weight: bold;
             border: none;
             box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 2000; /* Asegura quedar por encima del mapa y del zoom */
+            z-index: 2000; 
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -60,41 +58,52 @@
         }
 
         .boton-plus-movil:active {
-            transform: scale(0.9); /* Pequeño rebote táctil */
+            transform: scale(0.9); 
+        }
+
+        /* 🟢 NUEVO CSS: Ajustes de diseño para la herramienta de medición */
+        .leaflet-control-measure {
+            border: none !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         }
 
         /* Modificaciones exclusivas para pantallas móviles (iPhone) */
         @media (max-width: 767px) {
             
-            /* Forzamos al cuadro blanco de Leaflet a comportarse como un panel flotante inferior */
             .leaflet-control-layers {
                 position: absolute !important;
-                bottom: 95px !important; /* Separado del botón Plus */
+                bottom: 95px !important; 
                 right: 25px !important;
                 margin: 0 !important;
-                max-height: 50vh; /* Máximo la mitad de la pantalla para evitar colapsos */
+                max-height: 50vh; 
                 width: 280px;
-                overflow-y: auto; /* Permite scroll si la lista de municipios crece */
+                overflow-y: auto; 
                 box-shadow: 0px 4px 15px rgba(0,0,0,0.25) !important;
                 border: 1px solid #ddd !important;
                 border-radius: 12px !important;
                 padding: 15px !important;
-                font-size: 16px !important; /* Tamaño cómodo para el dedo */
-                
-                /* Transición suave de apertura y cierre */
+                font-size: 16px !important; 
                 transition: opacity 0.2s ease, transform 0.2s ease;
                 transform-origin: bottom right;
             }
 
-            /* Clase de control para esconder el menú */
             .leaflet-control-layers.menu-escondido {
                 opacity: 0 !important;
                 pointer-events: none !important;
                 transform: scale(0.85) translateY(15px);
             }
+
+            /* Alineamos de forma vertical el zoom y la regla de medición abajo a la izquierda */
+            .leaflet-bottom.leaflet-left {
+                bottom: 25px !important;
+                left: 25px !important;
+                display: flex;
+                flex-direction: column-reverse;
+                gap: 12px;
+            }
         }
 
-        /* Ocultar el botón Plus en computadoras para que el flujo clásico no se rompa */
         @media (min-width: 768px) {
             .boton-plus-movil {
                 display: none;
@@ -115,6 +124,8 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.js"></script>
+    
     <script>
         // 1. Inicializar el mapa sin botones de zoom por defecto
         const map = L.map('map', {
@@ -127,7 +138,6 @@
         let gpsMarker = null;
         let gpsCircle = null;
 
-        // Función que se ejecuta cuando el iPhone encuentra el GPS
         function onLocationFound(e) {
             if (gpsMarker) { map.removeLayer(gpsMarker); }
             if (gpsCircle) { map.removeLayer(gpsCircle); }
@@ -149,7 +159,7 @@
             alert("No se pudo acceder al GPS: " + e.message);
         });
 
-        // Añadir botones de zoom abajo a la izquierda para no estorbar
+        // Añadir botones de zoom abajo a la izquierda
         L.control.zoom({
             position: 'bottomleft' 
         }).addTo(map);
@@ -159,6 +169,19 @@
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
+
+        // 🟢 NUEVO: Inicializar herramienta de medición en español y formato métrico
+        const opcionesMedicion = new L.Control.Measure({
+            position: 'bottomleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            activeColor: '#ff9500',   /* Línea elástica naranja al medir */
+            completedColor: '#10b981', /* Línea verde fija al terminar */
+            localization: 'es',       /* Traducir textos a español */
+            popupOptions: { className: 'leaflet-measure-popup', autoPanPadding: [10, 10] }
+        });
+        map.addControl(opcionesMedicion);
 
         // CONTENEDORES DE CAPAS
         const grupoProvincia = L.layerGroup().addTo(map); 
@@ -231,13 +254,10 @@
                     listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
                 }
 
-                // 🟢 SE CREA EL CONTROL UNA SOLA VEZ AQUÍ
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
                 console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
 
-                // ========================================================
-                // 🟢 UNIFICADO: ACTIVADOR INMANIBLE DEL BOTÓN PLUS
-                // ========================================================
+                // ACTIVADOR DEL BOTÓN PLUS (MODO MOVIL)
                 function activarBotonMovil() {
                     const menuOriginal = document.querySelector('.leaflet-control-layers');
                     const botonPlus = document.getElementById('btn-toggle-capas');
@@ -252,15 +272,12 @@
                     L.DomEvent.disableClickPropagation(menuOriginal);
                     L.DomEvent.disableScrollPropagation(menuOriginal);
 
-                    // Forzar ocultamiento inicial si se visualiza en móvil
                     if (window.innerWidth < 768) {
                         menuOriginal.classList.add('menu-escondido');
                     }
                     
-                    // Acción al presionar el botón Plus/Cerrar
                     botonPlus.onclick = function(e) {
                         if (e) e.stopPropagation();
-                        
                         menuOriginal.classList.toggle('menu-escondido');
                         
                         if (menuOriginal.classList.contains('menu-escondido')) {
@@ -272,7 +289,6 @@
                         }
                     };
 
-                    // Esconder automáticamente al interactuar directamente con el mapa
                     map.on('click', function() {
                         if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
                             menuOriginal.classList.add('menu-escondido');
