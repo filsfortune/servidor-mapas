@@ -44,25 +44,37 @@ app.get('/api/mapa', async (req, res) => {
   }
 });
 
-// 3. NUEVA RUTA: MUNICIPIOS (Para leer La Lisa y los que agregues)
+// 3. NUEVA RUTA: MUNICIPIOS (Corregida y completa)
 app.get('/api/municipios', async (req, res) => {
   try {
-    // Consultamos el id y la geometría convertida a GeoJSON
-    const result = await pool.query('SELECT id, ST_AsGeoJSON(geom)::json as geometry FROM municipios');
+    // CORRECCIÓN: Añadimos 'fid' y 'nombre' dentro del SELECT para que la base de datos los devuelva
+    const query = `
+      SELECT 
+        id, 
+        fid, 
+        nombre, 
+        ST_AsGeoJSON(geom)::json as geometry 
+      FROM municipios
+    `;
+    
+    const result = await pool.query(query);
     
     const geojson = {
       type: "FeatureCollection",
       features: result.rows.map(row => ({
         type: "Feature",
+        id: row.id,
         geometry: row.geometry,
         properties: {
-          nombre: row.nombre // Guardamos el nombre para que Leaflet lo lea
+          fid: row.fid,       // Enviamos el fid de QGIS
+          nombre: row.nombre  // ¡AHORA SÍ! row.nombre tiene los datos de Neon
         }
       }))
     };
+    
     res.json(geojson);
   } catch (err) {
-    console.error(err);
+    console.error('Error en la API de municipios:', err);
     res.status(500).json({ error: err.message });
   }
 });
