@@ -170,7 +170,9 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 🟢 NUEVO: Inicializar herramienta de medición en español y formato métrico
+        // ========================================================
+        // ⚙️ CONFIGURACIÓN DE MEDICIÓN CORREGIDA (MAPA FIJO)
+        // ========================================================
         const opcionesMedicion = new L.Control.Measure({
             position: 'bottomleft',
             primaryLengthUnit: 'meters',
@@ -179,9 +181,24 @@
             activeColor: '#ff9500',   /* Línea elástica naranja al medir */
             completedColor: '#10b981', /* Línea verde fija al terminar */
             localization: 'es',       /* Traducir textos a español */
-            popupOptions: { className: 'leaflet-measure-popup', autoPanPadding: [10, 10] }
+            
+            // 🔴 SOLUCIÓN AQUÍ: Evita que el mapa se mueva solo al hacer clic
+            captureZIndex: 10000,
+            popupOptions: { 
+                className: 'leaflet-measure-popup', 
+                autoPan: false, // Desactiva por completo el movimiento automático del mapa
+                autoPanPadding: [0, 0] 
+            }
         });
         map.addControl(opcionesMedicion);
+
+        // Bloqueo adicional: Asegura que Leaflet no mueva el mapa de fondo con eventos táctiles parásitos
+        map.on('measurestart', function() {
+            map.dragging.disable(); // Desactiva el arrastre del mapa temporalmente mientras mides
+        });
+        map.on('measurefinish', function() {
+            map.dragging.enable();  // Devuelve el control del mapa cuando terminas de medir
+        });
 
         // CONTENEDORES DE CAPAS
         const grupoProvincia = L.layerGroup().addTo(map); 
