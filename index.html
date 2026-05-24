@@ -10,9 +10,12 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
         #map {
-            height: 100vh;
+            height: 100svh; 
             width: 100%;
+            position: relative;
+            z-index: 1;
         }
         
         /* Panel flotante de información */
@@ -30,13 +33,73 @@
         .info-panel h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
         .info-panel p { font-size: 12px; color: #666; }
 
-        /* Estilos para el contenedor del mapa en dispositivos móviles */
-#map {
-    width: 100%;
-    height: 100svh; 
-}
+        /* ========================================================
+           🔴 NUEVO CSS: DISEÑO RESPONSIVO PARA EL BOTÓN PLUS
+           ======================================================== */
+        
+        /* Estilo del botón flotante "+" abajo a la derecha */
+        .boton-plus-movil {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: #007aff; /* Azul nativo de iOS */
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 2000; /* Asegura quedar por encima del mapa y del zoom */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
 
-/* ... Aquí pegas todo el código CSS del paso anterior (.floating-btn, .layers-panel, etc.) ... */
+        .boton-plus-movil:active {
+            transform: scale(0.9); /* Pequeño rebote táctil */
+        }
+
+        /* Modificaciones exclusivas para pantallas móviles (iPhone) */
+        @media (max-width: 767px) {
+            
+            /* Forzamos al cuadro blanco de Leaflet a comportarse como un panel flotante inferior */
+            .leaflet-control-layers {
+                position: absolute !important;
+                bottom: 95px !important; /* Separado del botón Plus */
+                right: 25px !important;
+                margin: 0 !important;
+                max-height: 50vh; /* Máximo la mitad de la pantalla para evitar colapsos */
+                width: 280px;
+                overflow-y: auto; /* Permite scroll si la lista de municipios crece */
+                box-shadow: 0px 4px 15px rgba(0,0,0,0.25) !important;
+                border: 1px solid #ddd !important;
+                border-radius: 12px !important;
+                padding: 15px !important;
+                font-size: 16px !important; /* Tamaño cómodo para el dedo */
+                
+                /* Transición suave de apertura y cierre */
+                transition: opacity 0.2s ease, transform 0.2s ease;
+                transform-origin: bottom right;
+            }
+
+            /* Clase de control para esconder el menú */
+            .leaflet-control-layers.menu-escondido {
+                opacity: 0 !important;
+                pointer-events: none !important;
+                transform: scale(0.85) translateY(15px);
+            }
+        }
+
+        /* Ocultar el botón Plus en computadoras para que el flujo clásico no se rompa */
+        @media (min-width: 768px) {
+            .boton-plus-movil {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -48,71 +111,61 @@
 
     <div id="map"></div>
 
+    <button id="btn-toggle-capas" class="boton-plus-movil">+</button>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
-        // 1. Inicializar el mapa SIN los botones de zoom por defecto (zoomControl: false)
-const map = L.map('map', {
-    zoomControl: false 
-}).setView([23.05, -82.40], 11);
+        // 1. Inicializar el mapa sin botones de zoom por defecto
+        const map = L.map('map', {
+            zoomControl: false 
+        }).setView([23.05, -82.40], 11);
 
-// 1. Activar la geolocalización nativa de Leaflet
-map.locate({ setView: true, maxZoom: 16, watch: true });
+        // Activar la geolocalización nativa de Leaflet
+        map.locate({ setView: true, maxZoom: 16, watch: true });
 
-// Variable para guardar el marcador del punto azul y no duplicarlo
-let gpsMarker = null;
-let gpsCircle = null;
+        let gpsMarker = null;
+        let gpsCircle = null;
 
-// 2. Función que se ejecuta cuando el iPhone encuentra el GPS
-function onLocationFound(e) {
-    // Si ya existe el punto azul, lo quitamos para actualizar la posición
-    if (gpsMarker) { map.removeLayer(gpsMarker); }
-    if (gpsCircle) { map.removeLayer(gpsCircle); }
+        // Función que se ejecuta cuando el iPhone encuentra el GPS
+        function onLocationFound(e) {
+            if (gpsMarker) { map.removeLayer(gpsMarker); }
+            if (gpsCircle) { map.removeLayer(gpsCircle); }
 
-    // Círculo semitransparente que indica el margen de error/precisión
-    gpsCircle = L.circle(e.latlng, e.accuracy).addTo(map);
+            gpsCircle = L.circle(e.latlng, e.accuracy).addTo(map);
 
-    // Marcador estilizado como punto azul
-    gpsMarker = L.circleMarker(e.latlng, {
-        color: '#fff',          // Borde blanco
-        fillColor: '#007AFF',   // Azul característico de iOS GPS
-        fillOpacity: 1,
-        radius: 8,
-        weight: 3
-    }).addTo(map);
-}
+            gpsMarker = L.circleMarker(e.latlng, {
+                color: '#fff',          
+                fillColor: '#007AFF',   
+                fillOpacity: 1,
+                radius: 8,
+                weight: 3
+            }).addTo(map);
+        }
 
-// Escuchar el evento de ubicación encontrada
-map.on('locationfound', onLocationFound);
+        map.on('locationfound', onLocationFound);
 
-// Manejar posibles errores (ej. si el usuario rechaza el permiso)
-map.on('locationerror', function(e) {
-    alert("No se pudo acceder al GPS: " + e.message);
-});
+        map.on('locationerror', function(e) {
+            alert("No se pudo acceder al GPS: " + e.message);
+        });
 
-// Ahora añadimos los botones de zoom manualmente en otra posición
-// Opciones listas para usar: 'topleft', 'topright', 'bottomleft', 'bottomright'
-L.control.zoom({
-    position: 'bottomleft' // Al ponerlo abajo a la izquierda, deja libre tu panel de arriba
-}).addTo(map);
+        // Añadir botones de zoom abajo a la izquierda para no estorbar
+        L.control.zoom({
+            position: 'bottomleft' 
+        }).addTo(map);
 
-        // 2. Añadir el mapa base de OpenStreetMap
+        // Añadir el mapa base de OpenStreetMap
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // ========================================================
-        // 1. CONTENEDORES DE CAPAS (Grupos lógicos)
-        // ========================================================
-        const grupoProvincia = L.layerGroup().addTo(map); // Capa base provincial
-        const capasMunicipios = {}; // Objeto vacío para separar los 15 municipios dinámicamente
-        let controlCapas; // Variable global para controlar el panel interactivo de la derecha
+        // CONTENEDORES DE CAPAS
+        const grupoProvincia = L.layerGroup().addTo(map); 
+        const capasMunicipios = {}; 
+        let controlCapas; 
 
-        // ========================================================
-        // 3. CARGAR PROVINCIA (Color Azul Moderno Institucional)
-        // ========================================================
+        // CARGAR PROVINCIA 
         const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
 
         fetch(urlProvincia)
@@ -123,25 +176,22 @@ L.control.zoom({
             .then(data => {
                 const capaProvincia = L.geoJSON(data, {
                     style: {
-                        color: '#2563eb',       // Borde azul
-                        weight: 3,              // Borde más grueso por ser el límite mayor
+                        color: '#2563eb',      
+                        weight: 3,              
                         opacity: 0.9,
-                        fillColor: '#3b82f6',   // Relleno azul
-                        fillOpacity: 0.15       // Más transparente para dejar ver el fondo
+                        fillColor: '#3b82f6',   
+                        fillOpacity: 0.15      
                     },
                     onEachFeature: function (feature, layer) {
                         layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
                     }
                 }).addTo(grupoProvincia);
 
-                // Ajustar la cámara para que encuadre todo perfectamente al iniciar
                 map.fitBounds(capaProvincia.getBounds());
             })
             .catch(error => console.error('Error cargando provincia:', error));
 
-        // ========================================================
-        // 4. CARGAR MUNICIPIOS DINÁMICOS DESDE TU NUEVA API DE NEON
-        // ========================================================
+        // CARGAR MUNICIPIOS DINÁMICOS DESDE API
         const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
 
         fetch(urlMunicipios)
@@ -150,27 +200,21 @@ L.control.zoom({
                 return response.json();
             })
             .then(data => {
-                // Extraemos los 15 nombres únicos reales devueltos por tu server.js actualizado
                 const nombresMunicipios = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
 
-                // Recorremos cada nombre para procesar su geometría e inyectar color único aleatorio
                 nombresMunicipios.forEach(nombreMuni => {
-                    
-                    // Inicializamos la capa independiente en el mapa para este municipio activo
                     capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
 
-                    // Filtramos el GeoJSON completo para renderizar únicamente este municipio en su capa
                     L.geoJSON(data, {
                         filter: function(feature) {
                             return feature.properties.nombre === nombreMuni;
                         },
                         style: {
-                            color: '#475569',       // Borde gris oscuro limpio para separar colindancias
+                            color: '#475569',      
                             weight: 1.5,
                             opacity: 0.9,
-                            // Genera un color hexadecimal fijo basado exclusivamente en las letras del nombre del municipio
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
-                            fillOpacity: 0.45       // Transparencia ideal para contrastar datos urbanos de fondo
+                            fillOpacity: 0.45      
                         },
                         onEachFeature: function (feature, layer) {
                             layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}<br><em>ID Base de Datos:</em> ${feature.id}`);
@@ -178,22 +222,56 @@ L.control.zoom({
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
-                // ========================================================
-                // 5. CONSTRUCCIÓN ASINCRÓNICA DEL CONTROL DE CAPAS (Menú interactivo)
-                // ========================================================
+                // CONSTRUCCIÓN DEL CONTROL DE CAPAS ORIGINAL
                 const listaControles = {
                     "Límite Provincial": grupoProvincia
                 };
 
-                // Insertamos dinámicamente cada uno de los 15 municipios con su casilla independiente
                 for (const nombre in capasMunicipios) {
                     listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
                 }
 
-                // Desplegamos el control en la esquina superior derecha totalmente abierto
+                // Desplegamos el control nativo totalmente abierto tal como estaba
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-
                 console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
+
+                // ========================================================
+                // 🟢 NUEVO JAVASCRIPT: LOGICA DE APERTURA / CIERRE
+                // ========================================================
+                // Buscamos el menú generado dinámicamente justo aquí adentro, cuando ya existe
+                const menuOriginal = document.querySelector('.leaflet-control-layers');
+                const botonPlus = document.getElementById('btn-toggle-capas');
+                
+                if (menuOriginal && botonPlus) {
+                    // Si el usuario entra desde un iPhone/móvil, ocultamos el menú inicialmente
+                    if (window.innerWidth < 768) {
+                        menuOriginal.classList.add('menu-escondido');
+                    }
+                    
+                    // Manejador del evento clic en el botón Plus
+                    botonPlus.addEventListener('click', function(e) {
+                        e.stopPropagation(); // Evitamos que el mapa se mueva o reciba un clic fantasma
+                        menuOriginal.classList.toggle('menu-escondido');
+                        
+                        // Cambiamos el diseño y texto del botón según el estado del panel
+                        if (menuOriginal.classList.contains('menu-escondido')) {
+                            botonPlus.innerText = '+';
+                            botonPlus.style.backgroundColor = '#007aff'; // Azul iOS
+                        } else {
+                            botonPlus.innerText = '✕';
+                            botonPlus.style.backgroundColor = '#ff3b30'; // Rojo iOS para cerrar
+                        }
+                    });
+
+                    // Si el usuario toca el mapa directamente, escondemos el menú para limpiar pantalla
+                    map.on('click', function() {
+                        if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
+                            menuOriginal.classList.add('menu-escondido');
+                            botonPlus.innerText = '+';
+                            botonPlus.style.backgroundColor = '#007aff';
+                        }
+                    });
+                }
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
