@@ -54,6 +54,40 @@ const map = L.map('map', {
     zoomControl: false 
 }).setView([23.05, -82.40], 11);
 
+// 1. Activar la geolocalización nativa de Leaflet
+map.locate({ setView: true, maxZoom: 16, watch: true });
+
+// Variable para guardar el marcador del punto azul y no duplicarlo
+let gpsMarker = null;
+let gpsCircle = null;
+
+// 2. Función que se ejecuta cuando el iPhone encuentra el GPS
+function onLocationFound(e) {
+    // Si ya existe el punto azul, lo quitamos para actualizar la posición
+    if (gpsMarker) { map.removeLayer(gpsMarker); }
+    if (gpsCircle) { map.removeLayer(gpsCircle); }
+
+    // Círculo semitransparente que indica el margen de error/precisión
+    gpsCircle = L.circle(e.latlng, e.accuracy).addTo(map);
+
+    // Marcador estilizado como punto azul
+    gpsMarker = L.circleMarker(e.latlng, {
+        color: '#fff',          // Borde blanco
+        fillColor: '#007AFF',   // Azul característico de iOS GPS
+        fillOpacity: 1,
+        radius: 8,
+        weight: 3
+    }).addTo(map);
+}
+
+// Escuchar el evento de ubicación encontrada
+map.on('locationfound', onLocationFound);
+
+// Manejar posibles errores (ej. si el usuario rechaza el permiso)
+map.on('locationerror', function(e) {
+    alert("No se pudo acceder al GPS: " + e.message);
+});
+
 // Ahora añadimos los botones de zoom manualmente en otra posición
 // Opciones listas para usar: 'topleft', 'topright', 'bottomleft', 'bottomright'
 L.control.zoom({
