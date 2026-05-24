@@ -35,6 +35,14 @@
     width: 100%;
     height: 100svh; 
 }
+
+/* Al final de tu archivo CSS o dentro de <style> */
+#map {
+  position: relative;
+  z-index: 1;
+}
+
+/* ... Aquí pegas todo el código CSS del paso anterior (.floating-btn, .layers-panel, etc.) ... */
     </style>
 </head>
 <body>
@@ -45,6 +53,24 @@
     </div>
 
     <div id="map"></div>
+
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+
+<button id="btn-capas" class="floating-btn" aria-label="Abrir capas">
+  <span class="icon">+</span>
+</button>
+
+<div id="panel-capas" class="layers-panel hidden">
+  <div class="panel-header">
+    <h3>Capas del Mapa</h3>
+    <button id="btn-cerrar">✕</button>
+  </div>
+  <div class="panel-body">
+    <label><input type="checkbox" id="chk-provincial" checked> Límite Provincial</label>
+    <label><input type="checkbox" id="chk-playa" checked> Municipio: Playa</label>
+    <label><input type="checkbox" id="chk-habana-este" checked> Municipio: Habana del Este</label>
+    </div>
+</div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -187,10 +213,55 @@ L.control.zoom({
                     listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
                 }
 
-                // Desplegamos el control en la esquina superior derecha totalmente abierto
-                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
+              // 1. Inicializas tu mapa normalmente
+var map = L.map('map').setView([23.1136, -82.3666], 11);
 
-                console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
+// 2. Tus capas existentes (Ejemplo de tus capas vectoriales GeoJSON o WMS)
+var capaProvincial = L.geoJSON(datosProvinciales).addTo(map);
+var capaPlaya = L.geoJSON(datosPlaya).addTo(map);
+var capaHabanaEste = L.geoJSON(datosHabanaEste).addTo(map);
+
+// ==========================================
+// 🔴 MIGRACIÓN: COLOCA ESTO AQUÍ
+// ==========================================
+
+// A. Lógica para abrir y cerrar el panel del iPhone
+const btnCapas = document.getElementById('btn-capas');
+const panelCapas = document.getElementById('panel-capas');
+const btnCerrar = document.getElementById('btn-cerrar');
+
+btnCapas.addEventListener('click', () => panelCapas.classList.toggle('hidden'));
+btnCerrar.addEventListener('click', () => panelCapas.classList.add('hidden'));
+
+// B. Conectar tus nuevos checkboxes HTML para encender/apagar capas
+// Control de Límite Provincial
+document.getElementById('chk-provincial').addEventListener('change', function(e) {
+    if (this.checked) {
+        map.addLayer(capaProvincial);
+    } else {
+        map.removeLayer(capaProvincial);
+    }
+});
+
+// Control de Municipio Playa
+document.getElementById('chk-playa').addEventListener('change', function(e) {
+    if (this.checked) {
+        map.addLayer(capaPlaya);
+    } else {
+        map.removeLayer(capaPlaya);
+    }
+});
+
+// Control de Municipio Habana del Este
+document.getElementById('chk-habana-este').addEventListener('change', function(e) {
+    if (this.checked) {
+        map.addLayer(capaHabanaEste);
+    } else {
+        map.removeLayer(capaHabanaEste);
+    }
+});
+
+// ... repites este bloque 'change' para cada municipio ...
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
