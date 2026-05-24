@@ -213,55 +213,10 @@ L.control.zoom({
                     listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
                 }
 
-              // 1. Inicializas tu mapa normalmente
-var map = L.map('map').setView([23.1136, -82.3666], 11);
+                // Desplegamos el control en la esquina superior derecha totalmente abierto
+                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
 
-// 2. Tus capas existentes (Ejemplo de tus capas vectoriales GeoJSON o WMS)
-var capaProvincial = L.geoJSON(datosProvinciales).addTo(map);
-var capaPlaya = L.geoJSON(datosPlaya).addTo(map);
-var capaHabanaEste = L.geoJSON(datosHabanaEste).addTo(map);
-
-// ==========================================
-// 🔴 MIGRACIÓN: COLOCA ESTO AQUÍ
-// ==========================================
-
-// A. Lógica para abrir y cerrar el panel del iPhone
-const btnCapas = document.getElementById('btn-capas');
-const panelCapas = document.getElementById('panel-capas');
-const btnCerrar = document.getElementById('btn-cerrar');
-
-btnCapas.addEventListener('click', () => panelCapas.classList.toggle('hidden'));
-btnCerrar.addEventListener('click', () => panelCapas.classList.add('hidden'));
-
-// B. Conectar tus nuevos checkboxes HTML para encender/apagar capas
-// Control de Límite Provincial
-document.getElementById('chk-provincial').addEventListener('change', function(e) {
-    if (this.checked) {
-        map.addLayer(capaProvincial);
-    } else {
-        map.removeLayer(capaProvincial);
-    }
-});
-
-// Control de Municipio Playa
-document.getElementById('chk-playa').addEventListener('change', function(e) {
-    if (this.checked) {
-        map.addLayer(capaPlaya);
-    } else {
-        map.removeLayer(capaPlaya);
-    }
-});
-
-// Control de Municipio Habana del Este
-document.getElementById('chk-habana-este').addEventListener('change', function(e) {
-    if (this.checked) {
-        map.addLayer(capaHabanaEste);
-    } else {
-        map.removeLayer(capaHabanaEste);
-    }
-});
-
-// ... repites este bloque 'change' para cada municipio ...
+                console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
     </script>
