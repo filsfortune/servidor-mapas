@@ -35,7 +35,52 @@
         .info-panel h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
         .info-panel p { font-size: 12px; color: #666; }
 
-        /* DISEÑO RESPONSIVO DEL BOTÓN PLUS (MÓVIL) */
+        /* Contenedor de herramientas abajo a la izquierda */
+        .contenedor-herramientas-izq {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+
+        /* Estilo base para los botones circulares flotantes */
+        .btn-flotante {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: white;
+            border: none;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .btn-flotante:active {
+            transform: scale(0.9);
+        }
+
+        /* Estados activos para saber qué herramienta está encendida */
+        .btn-flotante.activo-medicion {
+            background-color: #ff9500 !important; /* Naranja */
+            color: white;
+        }
+
+        .btn-flotante.activo-poi {
+            background-color: #34c759 !important; /* Verde */
+            color: white;
+        }
+
+        /* Botón de control nativo del zoom (oculto por defecto o reubicado si lo deseas) */
+        .leaflet-bar { border: none !important; box-shadow: none !important; }
+
+        /* DISEÑO RESPONSIVO DEL BOTÓN PLUS (MÓVIL - DERECHA) */
         .boton-plus-movil {
             position: absolute;
             bottom: 25px;
@@ -57,13 +102,13 @@
             transition: transform 0.2s ease, background-color 0.2s ease;
         }
 
-        .boton-plus-movil:active {
-            transform: scale(0.9); 
+        /* Ocultar la regla gris nativa del plugin para usar nuestro propio botón limpio */
+        .polyline-measure-unicontrol {
+            display: none !important;
         }
 
         /* Modificaciones exclusivas para pantallas móviles (iPhone) */
         @media (max-width: 767px) {
-            
             .leaflet-control-layers {
                 position: absolute !important;
                 bottom: 95px !important; 
@@ -86,21 +131,10 @@
                 pointer-events: none !important;
                 transform: scale(0.85) translateY(15px);
             }
-
-            /* Alineación del zoom y el nuevo botón de la regla abajo a la izquierda */
-            .leaflet-bottom.leaflet-left {
-                bottom: 25px !important;
-                left: 25px !important;
-                display: flex;
-                flex-direction: column-reverse;
-                gap: 12px;
-            }
         }
 
         @media (min-width: 768px) {
-            .boton-plus-movil {
-                display: none;
-            }
+            .boton-plus-movil { display: none; }
         }
     </style>
 </head>
@@ -113,6 +147,11 @@
 
     <div id="map"></div>
 
+    <div class="contenedor-herramientas-izq">
+        <button id="btn-herramienta-medir" class="btn-flotante" title="Medir Calles">📏</button>
+        <button id="btn-herramienta-poi" class="btn-flotante" title="Agregar Puntos">📍</button>
+    </div>
+
     <button id="btn-toggle-capas" class="boton-plus-movil">+</button>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -120,10 +159,8 @@
     <script src="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.js"></script>
     
     <script>
-        // 1. Inicializar el mapa sin controles de zoom por defecto
-        const map = L.map('map', {
-            zoomControl: false 
-        }).setView([23.05, -82.40], 11);
+        // 1. Inicializar el mapa
+        const map = L.map('map', { zoomControl: false }).setView([23.05, -82.40], 11);
 
         // GEOLOCALIZACIÓN FIJA
         map.locate({ setView: true, maxZoom: 15 });
@@ -134,72 +171,51 @@
         function onLocationFound(e) {
             if (gpsMarker) { map.removeLayer(gpsMarker); }
             if (gpsCircle) { map.removeLayer(gpsCircle); }
-
             gpsCircle = L.circle(e.latlng, e.accuracy).addTo(map);
-
             gpsMarker = L.circleMarker(e.latlng, {
-                color: '#fff',          
-                fillColor: '#007AFF',   
-                fillOpacity: 1,
-                radius: 8,
-                weight: 3
+                color: '#fff', fillColor: '#007AFF', fillOpacity: 1, radius: 8, weight: 3
             }).addTo(map);
         }
-
         map.on('locationfound', onLocationFound);
-
-        // Añadir botones de zoom abajo a la izquierda
-        L.control.zoom({
-            position: 'bottomleft' 
-        }).addTo(map);
 
         // Añadir el mapa base de OpenStreetMap
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        // Inicializar el control de medición estático (m/km)
-        L.control.polylineMeasure({
-            position: 'bottomleft',
-            unit: 'metres',
-            showBearings: false,
-            clearMeasurementsOnStop: false,
-            showUnitControl: false,
-            tooltipTextDragandDrop: 'Arrastra para mover',
-            tooltipTextDelete: 'Clic para borrar punto',
-            tooltipTextMove: 'Clic para añadir punto',
-            tooltipTextResume: 'Clic para continuar la línea',
-            tooltipTextAdd: 'Clic para iniciar'
+            maxZoom: 19, attribution: '© OpenStreetMap'
         }).addTo(map);
 
         // CONTENEDORES DE CAPAS GLOBALES
         const grupoProvincia = L.layerGroup().addTo(map); 
-        const grupoPOIs = L.layerGroup().addTo(map); // Contenedor para tus puntos editables
+        const grupoPOIs = L.layerGroup().addTo(map); 
         const capasMunicipios = {}; 
         let controlCapas; 
 
+        // Variables de estado para el control de flujos independientes
+        let modoPoiActivo = false;
+
+        // 🟢 Inicializar el objeto de medición (la regla nativa queda oculta por CSS)
+        const medidorLineal = new L.Control.PolylineMeasure({
+            position: 'bottomleft',
+            unit: 'metres',
+            showBearings: false,
+            clearMeasurementsOnStop: true,
+            showUnitControl: false
+        });
+        medidorLineal.addTo(map);
+
+
         // CARGAR PROVINCIA 
         const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
-
         fetch(urlProvincia)
             .then(response => response.json())
             .then(data => {
                 const capaProvincia = L.geoJSON(data, {
-                    style: {
-                        color: '#2563eb', weight: 3, opacity: 0.9, fillColor: '#3b82f6', fillOpacity: 0.15      
-                    },
-                    onEachFeature: function (feature, layer) {
-                        layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
-                    }
+                    style: { color: '#2563eb', weight: 3, opacity: 0.9, fillColor: '#3b82f6', fillOpacity: 0.15 }
                 }).addTo(grupoProvincia);
                 map.fitBounds(capaProvincia.getBounds());
-            })
-            .catch(error => console.error('Error cargando provincia:', error));
+            });
 
         // CARGAR MUNICIPIOS DINÁMICOS DESDE API
         const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
-
         fetch(urlMunicipios)
             .then(response => response.json())
             .then(data => {
@@ -207,7 +223,6 @@
 
                 nombresMunicipios.forEach(nombreMuni => {
                     capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
-
                     L.geoJSON(data, {
                         filter: function(feature) { return feature.properties.nombre === nombreMuni; },
                         style: {
@@ -215,21 +230,15 @@
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
                             fillOpacity: 0.45      
                         },
-                        onEachFeature: function (feature, layer) {
-                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`);
-                        }
+                        onEachFeature: function (feature, layer) { layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); }
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
-                // CONSTRUCCIÓN DEL CONTROL DE CAPAS (Se incluye la de tus puntos personales)
                 const listaControles = {
                     "Límite Provincial": grupoProvincia,
                     "Mis Puntos Guardados": grupoPOIs
                 };
-
-                for (const nombre in capasMunicipios) {
-                    listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre];
-                }
+                for (const nombre in capasMunicipios) { listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre]; }
 
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
 
@@ -241,7 +250,6 @@
 
                     L.DomEvent.disableClickPropagation(botonPlus);
                     L.DomEvent.disableClickPropagation(menuOriginal);
-                    L.DomEvent.disableScrollPropagation(menuOriginal);
 
                     if (window.innerWidth < 768) { menuOriginal.classList.add('menu-escondido'); }
                     
@@ -251,32 +259,72 @@
                         botonPlus.innerText = menuOriginal.classList.contains('menu-escondido') ? '+' : '✕';
                         botonPlus.style.backgroundColor = menuOriginal.classList.contains('menu-escondido') ? '#007aff' : '#ff3b30';
                     };
-
-                    map.on('click', function() {
-                        if (window.innerWidth < 768 && !menuOriginal.classList.contains('menu-escondido')) {
-                            menuOriginal.classList.add('menu-escondido');
-                            botonPlus.innerText = '+';
-                            botonPlus.style.backgroundColor = '#007aff';
-                        }
-                    });
                 }
                 activarBotonMovil();
-            })
-            .catch(error => console.error('Error cargando la división municipal:', error));
+            });
 
 
         // ========================================================
-        // 🟢 SCRIPT DE CREACIÓN, EDICIÓN Y BORRADO DIRECTO DE PUNTOS
+        // 🟢 LÓGICA DE HERRAMIENTAS SEPARADAS (MEDIR VS POI)
         // ========================================================
+        const btnMedir = document.getElementById('btn-herramienta-medir');
+        const btnPoi = document.getElementById('btn-herramienta-poi');
+
+        // Aislar clicks en los botones de herramientas para que Leaflet no registre clicks fantasmas
+        L.DomEvent.disableClickPropagation(btnMedir);
+        L.DomEvent.disableClickPropagation(btnPoi);
+
+        // --- ACCIÓN DEL BOTÓN MEDIR ---
+        btnMedir.onclick = function(e) {
+            if (e) e.stopPropagation();
+            
+            // Si la herramienta de POI estaba encendida, la apagamos primero
+            if (modoPoiActivo) {
+                modoPoiActivo = false;
+                btnPoi.classList.remove('activo-poi');
+            }
+
+            // Alternar estado de medición
+            if (btnMedir.classList.contains('activo-medicion')) {
+                btnMedir.classList.remove('activo-medicion');
+                medidorLineal._toggleControl(); // Apaga el plugin internamente
+            } else {
+                btnMedir.classList.add('activo-medicion');
+                medidorLineal._toggleControl(); // Enciende el plugin internamente
+            }
+        };
+
+        // --- ACCIÓN DEL BOTÓN PUNTOS DE INTERÉS (POI) ---
+        btnPoi.onclick = function(e) {
+            if (e) e.stopPropagation();
+
+            // Si la herramienta de medición estaba encendida, la apagamos primero
+            if (btnMedir.classList.contains('activo-medicion')) {
+                btnMedir.classList.remove('activo-medicion');
+                medidorLineal._toggleControl();
+            }
+
+            // Alternar estado de creación de POIs
+            if (modoPoiActivo) {
+                modoPoiActivo = false;
+                btnPoi.classList.remove('activo-poi');
+            } else {
+                modoPoiActivo = true;
+                btnPoi.classList.add('activo-poi');
+                alert("Modo marcador activo: Toca cualquier parte del mapa para añadir un punto.");
+            }
+        };
+
+
+        // --- CAPTURA DE CLICS EN EL MAPA PARA CREACIÓN ---
         map.on('click', function(e) {
-            // Protección: Si estás midiendo calles, no creamos puntos
-            if (document.querySelector('.polyline-measure-unicontrolActive')) return;
+            // Si el modo POI NO está activo, ignoramos por completo el clic
+            if (!modoPoiActivo) return;
 
-            // Formulario inicial de creación simplificado
             const contenidoCrear = `
                 <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
                     <strong style="display:block; margin-bottom:8px; color:#333;">Nuevo Punto</strong>
-                    <input type="text" id="crear-titulo" placeholder="Título (Ej. Iglesia)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                    <input type="text" id="crear-titulo" placeholder="Título (Ej. Casa)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
                     <textarea id="crear-desc" placeholder="Descripción corta..." rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
                     <button id="btn-guardar-poi" style="width:100%; background:#28a745; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Fijar Punto</button>
                 </div>
@@ -291,13 +339,9 @@
                         const titulo = document.getElementById('crear-titulo').value || 'Punto sin título';
                         const desc = document.getElementById('crear-desc').value || 'Sin descripción';
 
-                        // Creamos el marcador definitivo
                         const nuevoMarcador = L.marker(e.latlng).addTo(grupoPOIs);
-                        
-                        // Guardamos los datos directamente en el marcador para poder editarlos luego
                         nuevoMarcador.datosPOI = { titulo: titulo, descripcion: desc };
 
-                        // Función para actualizar la vista de lectura del marcador
                         function renderizarPopupLectura(marcador) {
                             const htmlLectura = `
                                 <div style="font-family: 'Segoe UI', sans-serif; min-width: 160px;">
@@ -314,19 +358,13 @@
 
                         renderizarPopupLectura(nuevoMarcador);
 
-                        // Escuchadores de acciones cuando el usuario abre el punto guardado
                         nuevoMarcador.on('popupopen', function() {
-                            // Acción Borrar
                             const btnBorrar = document.querySelector('.btn-borrar-poi');
-                            if (btnBorrar) {
-                                btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); };
-                            }
+                            if (btnBorrar) { btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); }; }
 
-                            // Acción Editar
                             const btnEditar = document.querySelector('.btn-editar-poi');
                             if (btnEditar) {
                                 btnEditar.onclick = function() {
-                                    // Cambiamos el contenido del popup por un formulario de edición con los datos actuales
                                     const htmlEdicion = `
                                         <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
                                             <strong style="display:block; margin-bottom:6px; color:#333;">Editar Datos</strong>
@@ -341,11 +379,8 @@
                                         const btnActualizar = document.getElementById('btn-actualizar-poi');
                                         if (btnActualizar) {
                                             btnActualizar.onclick = function() {
-                                                // Sobrescribimos los datos con lo nuevo que puso el usuario
                                                 nuevoMarcador.datosPOI.titulo = document.getElementById('edit-titulo').value || 'Sin título';
                                                 nuevoMarcador.datosPOI.descripcion = document.getElementById('edit-desc').value || 'Sin descripción';
-                                                
-                                                // Re-renderizamos y cerramos
                                                 renderizarPopupLectura(nuevoMarcador);
                                                 map.closePopup();
                                             };
