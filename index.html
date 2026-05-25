@@ -125,7 +125,7 @@
             zoomControl: false 
         }).setView([23.05, -82.40], 11);
 
-        // 🟢 GEOLOCALIZACIÓN FIJA (Te localiza al entrar pero apaga el rastreo continuo para evitar saltos)
+        // GEOLOCALIZACIÓN FIJA
         map.locate({ setView: true, maxZoom: 15 });
 
         let gpsMarker = null;
@@ -148,10 +148,6 @@
 
         map.on('locationfound', onLocationFound);
 
-        map.on('locationerror', function(e) {
-            console.log("GPS no disponible: " + e.message);
-        });
-
         // Añadir botones de zoom abajo a la izquierda
         L.control.zoom({
             position: 'bottomleft' 
@@ -163,7 +159,7 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // 🟢 NUEVO: Inicializar el control de medición estático (m/km)
+        // Inicializar el control de medición estático (m/km)
         L.control.polylineMeasure({
             position: 'bottomleft',
             unit: 'metres',
@@ -177,8 +173,9 @@
             tooltipTextAdd: 'Clic para iniciar'
         }).addTo(map);
 
-        // CONTENEDORES DE CAPAS
+        // CONTENEDORES DE CAPAS GLOBALES
         const grupoProvincia = L.layerGroup().addTo(map); 
+        const grupoPOIs = L.layerGroup().addTo(map); // Contenedor para tus puntos editables
         const capasMunicipios = {}; 
         let controlCapas; 
 
@@ -186,24 +183,16 @@
         const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
 
         fetch(urlProvincia)
-            .then(response => {
-                if (!response.ok) throw new Error('Error al cargar provincia');
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 const capaProvincia = L.geoJSON(data, {
                     style: {
-                        color: '#2563eb',      
-                        weight: 3,              
-                        opacity: 0.9,
-                        fillColor: '#3b82f6',   
-                        fillOpacity: 0.15      
+                        color: '#2563eb', weight: 3, opacity: 0.9, fillColor: '#3b82f6', fillOpacity: 0.15      
                     },
                     onEachFeature: function (feature, layer) {
                         layer.bindPopup(`<strong>Límite Provincial de La Habana</strong>`);
                     }
                 }).addTo(grupoProvincia);
-
                 map.fitBounds(capaProvincia.getBounds());
             })
             .catch(error => console.error('Error cargando provincia:', error));
@@ -212,10 +201,7 @@
         const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
 
         fetch(urlMunicipios)
-            .then(response => {
-                if (!response.ok) throw new Error('Error al cargar municipios');
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 const nombresMunicipios = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
 
@@ -223,25 +209,22 @@
                     capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
 
                     L.geoJSON(data, {
-                        filter: function(feature) {
-                            return feature.properties.nombre === nombreMuni;
-                        },
+                        filter: function(feature) { return feature.properties.nombre === nombreMuni; },
                         style: {
-                            color: '#475569',      
-                            weight: 1.5,
-                            opacity: 0.9,
+                            color: '#475569', weight: 1.5, opacity: 0.9,
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
                             fillOpacity: 0.45      
                         },
                         onEachFeature: function (feature, layer) {
-                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}<br><em>ID Base de Datos:</em> ${feature.id}`);
+                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`);
                         }
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
-                // CONSTRUCCIÓN DEL CONTROL DE CAPAS (Una sola vez)
+                // CONSTRUCCIÓN DEL CONTROL DE CAPAS (Se incluye la de tus puntos personales)
                 const listaControles = {
-                    "Límite Provincial": grupoProvincia
+                    "Límite Provincial": grupoProvincia,
+                    "Mis Puntos Guardados": grupoPOIs
                 };
 
                 for (const nombre in capasMunicipios) {
@@ -249,38 +232,24 @@
                 }
 
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-                console.log("¡Panel de Smart Cities actualizado con éxito con los 15 municipios!");
 
                 // ACTIVADOR DEL BOTÓN PLUS (MODO MÓVIL)
                 function activarBotonMovil() {
                     const menuOriginal = document.querySelector('.leaflet-control-layers');
                     const botonPlus = document.getElementById('btn-toggle-capas');
-                    
-                    if (!menuOriginal || !botonPlus) {
-                        setTimeout(activarBotonMovil, 50);
-                        return;
-                    }
+                    if (!menuOriginal || !botonPlus) { setTimeout(activarBotonMovil, 50); return; }
 
-                    // Aislamiento de clicks táctiles para resguardar la UI
                     L.DomEvent.disableClickPropagation(botonPlus);
                     L.DomEvent.disableClickPropagation(menuOriginal);
                     L.DomEvent.disableScrollPropagation(menuOriginal);
 
-                    if (window.innerWidth < 768) {
-                        menuOriginal.classList.add('menu-escondido');
-                    }
+                    if (window.innerWidth < 768) { menuOriginal.classList.add('menu-escondido'); }
                     
                     botonPlus.onclick = function(e) {
                         if (e) e.stopPropagation();
                         menuOriginal.classList.toggle('menu-escondido');
-                        
-                        if (menuOriginal.classList.contains('menu-escondido')) {
-                            botonPlus.innerText = '+';
-                            botonPlus.style.backgroundColor = '#007aff';
-                        } else {
-                            botonPlus.innerText = '✕';
-                            botonPlus.style.backgroundColor = '#ff3b30';
-                        }
+                        botonPlus.innerText = menuOriginal.classList.contains('menu-escondido') ? '+' : '✕';
+                        botonPlus.style.backgroundColor = menuOriginal.classList.contains('menu-escondido') ? '#007aff' : '#ff3b30';
                     };
 
                     map.on('click', function() {
@@ -291,10 +260,106 @@
                         }
                     });
                 }
-
                 activarBotonMovil();
             })
             .catch(error => console.error('Error cargando la división municipal:', error));
+
+
+        // ========================================================
+        // 🟢 SCRIPT DE CREACIÓN, EDICIÓN Y BORRADO DIRECTO DE PUNTOS
+        // ========================================================
+        map.on('click', function(e) {
+            // Protección: Si estás midiendo calles, no creamos puntos
+            if (document.querySelector('.polyline-measure-unicontrolActive')) return;
+
+            // Formulario inicial de creación simplificado
+            const contenidoCrear = `
+                <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
+                    <strong style="display:block; margin-bottom:8px; color:#333;">Nuevo Punto</strong>
+                    <input type="text" id="crear-titulo" placeholder="Título (Ej. Iglesia)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                    <textarea id="crear-desc" placeholder="Descripción corta..." rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
+                    <button id="btn-guardar-poi" style="width:100%; background:#28a745; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Fijar Punto</button>
+                </div>
+            `;
+
+            const popupCrear = L.popup().setLatLng(e.latlng).setContent(contenidoCrear).openOn(map);
+
+            setTimeout(() => {
+                const btnGuardar = document.getElementById('btn-guardar-poi');
+                if (btnGuardar) {
+                    btnGuardar.onclick = function() {
+                        const titulo = document.getElementById('crear-titulo').value || 'Punto sin título';
+                        const desc = document.getElementById('crear-desc').value || 'Sin descripción';
+
+                        // Creamos el marcador definitivo
+                        const nuevoMarcador = L.marker(e.latlng).addTo(grupoPOIs);
+                        
+                        // Guardamos los datos directamente en el marcador para poder editarlos luego
+                        nuevoMarcador.datosPOI = { titulo: titulo, descripcion: desc };
+
+                        // Función para actualizar la vista de lectura del marcador
+                        function renderizarPopupLectura(marcador) {
+                            const htmlLectura = `
+                                <div style="font-family: 'Segoe UI', sans-serif; min-width: 160px;">
+                                    <h3 style="margin:0 0 4px 0; font-size:14px; color:#333;">${marcador.datosPOI.titulo}</h3>
+                                    <p style="margin:0 0 12px 0; font-size:12px; color:#666;">${marcador.datosPOI.descripcion}</p>
+                                    <div style="display:flex; gap:6px;">
+                                        <button class="btn-editar-poi" style="flex:1; background:#007aff; color:white; border:none; padding:4px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">✏️ Editar</button>
+                                        <button class="btn-borrar-poi" style="flex:1; background:#dc3545; color:white; border:none; padding:4px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">🗑️ Borrar</button>
+                                    </div>
+                                </div>
+                            `;
+                            marcador.bindPopup(htmlLectura);
+                        }
+
+                        renderizarPopupLectura(nuevoMarcador);
+
+                        // Escuchadores de acciones cuando el usuario abre el punto guardado
+                        nuevoMarcador.on('popupopen', function() {
+                            // Acción Borrar
+                            const btnBorrar = document.querySelector('.btn-borrar-poi');
+                            if (btnBorrar) {
+                                btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); };
+                            }
+
+                            // Acción Editar
+                            const btnEditar = document.querySelector('.btn-editar-poi');
+                            if (btnEditar) {
+                                btnEditar.onclick = function() {
+                                    // Cambiamos el contenido del popup por un formulario de edición con los datos actuales
+                                    const htmlEdicion = `
+                                        <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
+                                            <strong style="display:block; margin-bottom:6px; color:#333;">Editar Datos</strong>
+                                            <input type="text" id="edit-titulo" value="${nuevoMarcador.datosPOI.titulo}" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                                            <textarea id="edit-desc" rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;">${nuevoMarcador.datosPOI.descripcion}</textarea>
+                                            <button id="btn-actualizar-poi" style="width:100%; background:#ff9500; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Actualizar</button>
+                                        </div>
+                                    `;
+                                    nuevoMarcador.setPopupContent(htmlEdicion);
+
+                                    setTimeout(() => {
+                                        const btnActualizar = document.getElementById('btn-actualizar-poi');
+                                        if (btnActualizar) {
+                                            btnActualizar.onclick = function() {
+                                                // Sobrescribimos los datos con lo nuevo que puso el usuario
+                                                nuevoMarcador.datosPOI.titulo = document.getElementById('edit-titulo').value || 'Sin título';
+                                                nuevoMarcador.datosPOI.descripcion = document.getElementById('edit-desc').value || 'Sin descripción';
+                                                
+                                                // Re-renderizamos y cerramos
+                                                renderizarPopupLectura(nuevoMarcador);
+                                                map.closePopup();
+                                            };
+                                        }
+                                    }, 50);
+                                };
+                            }
+                        });
+
+                        map.closePopup(popupCrear);
+                    };
+                }
+            }, 100);
+        });
     </script>
 </body>
 </html>
