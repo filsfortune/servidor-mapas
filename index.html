@@ -171,33 +171,38 @@
         }).addTo(map);
 
         // ========================================================
-        // ⚙️ CONFIGURACIÓN DE MEDICIÓN CORREGIDA (MAPA FIJO)
+        // ⚙️ CONFIGURACIÓN DE MEDICIÓN 100% ESTÁTICA (SIN MOVIMIENTO)
         // ========================================================
         const opcionesMedicion = new L.Control.Measure({
             position: 'bottomleft',
             primaryLengthUnit: 'meters',
             secondaryLengthUnit: 'kilometers',
             primaryAreaUnit: 'sqmeters',
-            activeColor: '#ff9500',   /* Línea elástica naranja al medir */
-            completedColor: '#10b981', /* Línea verde fija al terminar */
-            localization: 'es',       /* Traducir textos a español */
-            
-            // 🔴 SOLUCIÓN AQUÍ: Evita que el mapa se mueva solo al hacer clic
-            captureZIndex: 10000,
+            activeColor: '#ff9500',   /* Línea elástica naranja */
+            completedColor: '#10b981', /* Línea verde al terminar */
+            localization: 'es',
             popupOptions: { 
                 className: 'leaflet-measure-popup', 
-                autoPan: false, // Desactiva por completo el movimiento automático del mapa
-                autoPanPadding: [0, 0] 
+                autoPan: false, // Desactiva el movimiento por el globo de texto
+                closeButton: false
             }
         });
         map.addControl(opcionesMedicion);
 
-        // Bloqueo adicional: Asegura que Leaflet no mueva el mapa de fondo con eventos táctiles parásitos
+        // 🔴 TRUCO DEFINITIVO: Bloquear el movimiento parásito del mapa al medir
         map.on('measurestart', function() {
-            map.dragging.disable(); // Desactiva el arrastre del mapa temporalmente mientras mides
+            map.dragging.disable(); // Evita que arrastres el mapa sin querer
+            map.touchZoom.disable(); // Evita zooms raros con los dedos
+            map.doubleClickZoom.disable(); // Evita que el doble clic haga zoom
+            map.boxZoom.disable();
         });
+
         map.on('measurefinish', function() {
-            map.dragging.enable();  // Devuelve el control del mapa cuando terminas de medir
+            // Devolverle la vida y el movimiento normal al mapa cuando terminas
+            map.dragging.enable();
+            map.touchZoom.enable();
+            map.doubleClickZoom.enable();
+            map.boxZoom.enable();
         });
 
         // CONTENEDORES DE CAPAS
