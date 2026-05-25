@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // 2. HABILITAR CORS PARA CUALQUIER ORIGEN (Añade esta línea crucial)
 app.use(cors()); 
+app.use(express.json());
 
 // Configuración de la conexión a Neon usando la variable de entorno
 const pool = new Pool({
