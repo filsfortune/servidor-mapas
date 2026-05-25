@@ -20,7 +20,7 @@
             z-index: 1;
         }
         
-        /* Panel flotante de información */
+        /* Panel flotante de información superior izquierdo */
         .info-panel {
             position: absolute;
             top: 20px;
@@ -35,30 +35,30 @@
         .info-panel h1 { font-size: 18px; color: #333; margin-bottom: 5px; }
         .info-panel p { font-size: 12px; color: #666; }
 
-        /* Contenedor de herramientas abajo a la izquierda */
+        /* Contenedor personalizado abajo a la izquierda para las herramientas */
         .contenedor-herramientas-izq {
             position: absolute;
             bottom: 25px;
             left: 25px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             z-index: 2000;
         }
 
-        /* Estilo base para los botones circulares flotantes */
+        /* Estilo para el botón flotante del Marcador (POI) */
         .btn-flotante {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background-color: white;
             border: none;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 18px;
             transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
         }
 
@@ -66,75 +66,40 @@
             transform: scale(0.9);
         }
 
-        /* Estados activos para saber qué herramienta está encendida */
-        .btn-flotante.activo-medicion {
-            background-color: #ff9500 !important; /* Naranja */
-            color: white;
-        }
-
+        /* Estado activo cuando la herramienta de añadir puntos está encendida */
         .btn-flotante.activo-poi {
             background-color: #34c759 !important; /* Verde */
             color: white;
         }
 
-        /* Botón de control nativo del zoom (oculto por defecto o reubicado si lo deseas) */
-        .leaflet-bar { border: none !important; box-shadow: none !important; }
-
-        /* DISEÑO RESPONSIVO DEL BOTÓN PLUS (MÓVIL - DERECHA) */
-        .boton-plus-movil {
-            position: absolute;
-            bottom: 25px;
-            right: 25px;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background-color: #007aff; 
-            color: white;
-            font-size: 28px;
-            font-weight: bold;
-            border: none;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 2000; 
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s ease, background-color 0.2s ease;
+        /* Integración y ajuste de la flechita de medición nativa dentro de nuestro contenedor */
+        .leaflet-control-polylineMeasure {
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2) !important;
+        }
+        .leaflet-control-polylineMeasure a {
+            border-radius: 50% !important;
+            width: 44px !important;
+            height: 44px !important;
+            line-height: 44px !important;
+            background-size: 22px 22px !important;
         }
 
-        /* Ocultar la regla gris nativa del plugin para usar nuestro propio botón limpio */
-        .polyline-measure-unicontrol {
-            display: none !important;
+        /* Estilos específicos para el menú de capas superior derecho */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.15) !important;
+            padding: 10px !important;
+            max-height: 85vh;
+            overflow-y: auto;
         }
 
-        /* Modificaciones exclusivas para pantallas móviles (iPhone) */
         @media (max-width: 767px) {
             .leaflet-control-layers {
-                position: absolute !important;
-                bottom: 95px !important; 
-                right: 25px !important;
-                margin: 0 !important;
-                max-height: 50vh; 
-                width: 280px;
-                overflow-y: auto; 
-                box-shadow: 0px 4px 15px rgba(0,0,0,0.25) !important;
-                border: 1px solid #ddd !important;
-                border-radius: 12px !important;
-                padding: 15px !important;
-                font-size: 16px !important; 
-                transition: opacity 0.2s ease, transform 0.2s ease;
-                transform-origin: bottom right;
+                max-height: 60vh;
+                width: 240px;
             }
-
-            .leaflet-control-layers.menu-escondido {
-                opacity: 0 !important;
-                pointer-events: none !important;
-                transform: scale(0.85) translateY(15px);
-            }
-        }
-
-        @media (min-width: 768px) {
-            .boton-plus-movil { display: none; }
         }
     </style>
 </head>
@@ -147,22 +112,23 @@
 
     <div id="map"></div>
 
-    <div class="contenedor-herramientas-izq">
-        <button id="btn-herramienta-medir" class="btn-flotante" title="Medir Calles">📏</button>
-        <button id="btn-herramienta-poi" class="btn-flotante" title="Agregar Puntos">📍</button>
+    <div id="wrapper-herramientas" class="contenedor-herramientas-izq">
+        <button id="btn-herramienta-poi" class="btn-flotante" title="Activar/Desactivar Marcador">📍</button>
     </div>
-
-    <button id="btn-toggle-capas" class="boton-plus-movil">+</button>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script src="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.js"></script>
     
     <script>
-        // 1. Inicializar el mapa
-        const map = L.map('map', { zoomControl: false }).setView([23.05, -82.40], 11);
+        // 1. Inicializar el mapa con los botones de Zoom (+ y -) arriba a la derecha
+        const map = L.map('map', { 
+            zoomControl: true 
+        }).setView([23.05, -82.40], 11);
 
-        // GEOLOCALIZACIÓN FIJA
+        map.zoomControl.setPosition('topright');
+
+        // Geolocalización del dispositivo
         map.locate({ setView: true, maxZoom: 15 });
 
         let gpsMarker = null;
@@ -178,32 +144,42 @@
         }
         map.on('locationfound', onLocationFound);
 
-        // Añadir el mapa base de OpenStreetMap
+        // Mapa base (OpenStreetMap)
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19, attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // CONTENEDORES DE CAPAS GLOBALES
+        // CONTENEDORES DE CAPAS
         const grupoProvincia = L.layerGroup().addTo(map); 
         const grupoPOIs = L.layerGroup().addTo(map); 
         const capasMunicipios = {}; 
         let controlCapas; 
 
-        // Variables de estado para el control de flujos independientes
         let modoPoiActivo = false;
 
-        // 🟢 Inicializar el objeto de medición (la regla nativa queda oculta por CSS)
+        // 🟢 INICIALIZAR LA FLECHITA DE MEDICIÓN NATIVA
         const medidorLineal = new L.Control.PolylineMeasure({
             position: 'bottomleft',
             unit: 'metres',
             showBearings: false,
-            clearMeasurementsOnStop: true,
-            showUnitControl: false
+            clearMeasurementsOnStop: false,
+            showUnitControl: false,
+            tooltipTextDragandDrop: 'Arrastra para mover',
+            tooltipTextDelete: 'Clic para borrar punto',
+            tooltipTextMove: 'Clic para añadir punto',
+            tooltipTextResume: 'Clic para continuar la línea',
+            tooltipTextAdd: 'Clic para iniciar'
         });
         medidorLineal.addTo(map);
 
+        // 🔴 ACOMODAR LA FLECHITA DENTRO DE NUESTRO CONTENEDOR PERSONALIZADO
+        // Esto mueve el botón gris nativo dentro del contenedor para que quede perfectamente alineado sobre el de ubicación (📍)
+        const elementoMedicion = medidorLineal.getContainer();
+        const contenedorHerramientas = document.getElementById('wrapper-herramientas');
+        contenedorHerramientas.insertBefore(elementoMedicion, contenedorHerramientas.firstChild);
 
-        // CARGAR PROVINCIA 
+
+        // CARGAR CAPA PROVINCIA
         const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
         fetch(urlProvincia)
             .then(response => response.json())
@@ -214,7 +190,7 @@
                 map.fitBounds(capaProvincia.getBounds());
             });
 
-        // CARGAR MUNICIPIOS DINÁMICOS DESDE API
+        // CARGAR MUNICIPIOS DESDE TU API
         const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
         fetch(urlMunicipios)
             .then(response => response.json())
@@ -230,7 +206,9 @@
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
                             fillOpacity: 0.45      
                         },
-                        onEachFeature: function (feature, layer) { layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); }
+                        onEachFeature: function (feature, layer) { 
+                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); 
+                        }
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
@@ -241,91 +219,37 @@
                 for (const nombre in capasMunicipios) { listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre]; }
 
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-
-                // ACTIVADOR DEL BOTÓN PLUS (MODO MÓVIL)
-                function activarBotonMovil() {
-                    const menuOriginal = document.querySelector('.leaflet-control-layers');
-                    const botonPlus = document.getElementById('btn-toggle-capas');
-                    if (!menuOriginal || !botonPlus) { setTimeout(activarBotonMovil, 50); return; }
-
-                    L.DomEvent.disableClickPropagation(botonPlus);
-                    L.DomEvent.disableClickPropagation(menuOriginal);
-
-                    if (window.innerWidth < 768) { menuOriginal.classList.add('menu-escondido'); }
-                    
-                    botonPlus.onclick = function(e) {
-                        if (e) e.stopPropagation();
-                        menuOriginal.classList.toggle('menu-escondido');
-                        botonPlus.innerText = menuOriginal.classList.contains('menu-escondido') ? '+' : '✕';
-                        botonPlus.style.backgroundColor = menuOriginal.classList.contains('menu-escondido') ? '#007aff' : '#ff3b30';
-                    };
-                }
-                activarBotonMovil();
             });
 
 
         // ========================================================
-        // 🟢 LÓGICA DE HERRAMIENTAS SEPARADAS (MEDIR VS POI)
+        // GESTIÓN DEL BOTÓN FLOTANTE DEL MARCADOR (AÑADIR / EDITAR / BORRAR)
         // ========================================================
-        const btnMedir = document.getElementById('btn-herramienta-medir');
         const btnPoi = document.getElementById('btn-herramienta-poi');
-
-        // Aislar clicks en los botones de herramientas para que Leaflet no registre clicks fantasmas
-        L.DomEvent.disableClickPropagation(btnMedir);
         L.DomEvent.disableClickPropagation(btnPoi);
 
-        // --- ACCIÓN DEL BOTÓN MEDIR ---
-        btnMedir.onclick = function(e) {
-            if (e) e.stopPropagation();
-            
-            // Si la herramienta de POI estaba encendida, la apagamos primero
-            if (modoPoiActivo) {
-                modoPoiActivo = false;
-                btnPoi.classList.remove('activo-poi');
-            }
-
-            // Alternar estado de medición
-            if (btnMedir.classList.contains('activo-medicion')) {
-                btnMedir.classList.remove('activo-medicion');
-                medidorLineal._toggleControl(); // Apaga el plugin internamente
-            } else {
-                btnMedir.classList.add('activo-medicion');
-                medidorLineal._toggleControl(); // Enciende el plugin internamente
-            }
-        };
-
-        // --- ACCIÓN DEL BOTÓN PUNTOS DE INTERÉS (POI) ---
         btnPoi.onclick = function(e) {
             if (e) e.stopPropagation();
 
-            // Si la herramienta de medición estaba encendida, la apagamos primero
-            if (btnMedir.classList.contains('activo-medicion')) {
-                btnMedir.classList.remove('activo-medicion');
-                medidorLineal._toggleControl();
-            }
-
-            // Alternar estado de creación de POIs
+            // Seguridad: Si la medición está encendida, se recomienda apagarla al usar POIs
             if (modoPoiActivo) {
                 modoPoiActivo = false;
                 btnPoi.classList.remove('activo-poi');
             } else {
                 modoPoiActivo = true;
                 btnPoi.classList.add('activo-poi');
-                alert("Modo marcador activo: Toca cualquier parte del mapa para añadir un punto.");
             }
         };
 
-
-        // --- CAPTURA DE CLICS EN EL MAPA PARA CREACIÓN ---
+        // Capturar clics en el mapa para colocar los marcadores
         map.on('click', function(e) {
-            // Si el modo POI NO está activo, ignoramos por completo el clic
             if (!modoPoiActivo) return;
 
             const contenidoCrear = `
                 <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
                     <strong style="display:block; margin-bottom:8px; color:#333;">Nuevo Punto</strong>
-                    <input type="text" id="crear-titulo" placeholder="Título (Ej. Casa)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
-                    <textarea id="crear-desc" placeholder="Descripción corta..." rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
+                    <input type="text" id="crear-titulo" placeholder="Título (Ej. Iglesia)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                    <textarea id="crear-desc" placeholder="Descripción..." rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
                     <button id="btn-guardar-poi" style="width:100%; background:#28a745; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Fijar Punto</button>
                 </div>
             `;
@@ -360,7 +284,9 @@
 
                         nuevoMarcador.on('popupopen', function() {
                             const btnBorrar = document.querySelector('.btn-borrar-poi');
-                            if (btnBorrar) { btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); }; }
+                            if (btnBorrar) { 
+                                btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); }; 
+                            }
 
                             const btnEditar = document.querySelector('.btn-editar-poi');
                             if (btnEditar) {
