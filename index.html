@@ -72,7 +72,7 @@
             color: white;
         }
 
-        /* Integración y ajuste de la flechita de medición nativa dentro de nuestro contenedor */
+        /* Integración y ajuste de la flechita de medición nativa */
         .leaflet-control-polylineMeasure {
             margin: 0 !important;
             border: none !important;
@@ -85,6 +85,13 @@
             line-height: 44px !important;
             background-size: 22px 22px !important;
         }
+
+        /* 🟢 CLASES CSS PARA CAMBIAR EL COLOR DE LOS MARCADORES DE LEAFLET */
+        .marcador-rojo { filter: hue-rotate(140deg); }
+        .marcador-verde { filter: hue-rotate(240deg); }
+        .marcador-oro { filter: hue-rotate(50deg); }
+        .marcador-violeta { filter: hue-rotate(90deg); }
+        .marcador-azul { filter: hue-rotate(0deg); } /* Original */
 
         /* Estilos específicos para el menú de capas superior derecho */
         .leaflet-control-layers {
@@ -121,14 +128,11 @@
     <script src="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.js"></script>
     
     <script>
-        // 1. Inicializar el mapa con los botones de Zoom (+ y -) arriba a la derecha
-        const map = L.map('map', { 
-            zoomControl: true 
-        }).setView([23.05, -82.40], 11);
-
+        // 1. Inicializar el mapa
+        const map = L.map('map', { zoomControl: true }).setView([23.05, -82.40], 11);
         map.zoomControl.setPosition('topright');
 
-        // Geolocalización del dispositivo
+        // Geolocalización fija
         map.locate({ setView: true, maxZoom: 15 });
 
         let gpsMarker = null;
@@ -144,12 +148,12 @@
         }
         map.on('locationfound', onLocationFound);
 
-        // Mapa base (OpenStreetMap)
+        // Mapa base
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19, attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // CONTENEDORES DE CAPAS
+        // Contenedores de capas
         const grupoProvincia = L.layerGroup().addTo(map); 
         const grupoPOIs = L.layerGroup().addTo(map); 
         const capasMunicipios = {}; 
@@ -157,7 +161,7 @@
 
         let modoPoiActivo = false;
 
-        // 🟢 INICIALIZAR LA FLECHITA DE MEDICIÓN NATIVA
+        // Inicializar la flechita de medición nativa
         const medidorLineal = new L.Control.PolylineMeasure({
             position: 'bottomleft',
             unit: 'metres',
@@ -172,14 +176,12 @@
         });
         medidorLineal.addTo(map);
 
-        // 🔴 ACOMODAR LA FLECHITA DENTRO DE NUESTRO CONTENEDOR PERSONALIZADO
-        // Esto mueve el botón gris nativo dentro del contenedor para que quede perfectamente alineado sobre el de ubicación (📍)
+        // Acomodar la flechita arriba del marcador
         const elementoMedicion = medidorLineal.getContainer();
         const contenedorHerramientas = document.getElementById('wrapper-herramientas');
         contenedorHerramientas.insertBefore(elementoMedicion, contenedorHerramientas.firstChild);
 
-
-        // CARGAR CAPA PROVINCIA
+        // Cargar provincia
         const urlProvincia = 'https://servidor-mapas.onrender.com/api/mapa';
         fetch(urlProvincia)
             .then(response => response.json())
@@ -190,7 +192,7 @@
                 map.fitBounds(capaProvincia.getBounds());
             });
 
-        // CARGAR MUNICIPIOS DESDE TU API
+        // Cargar municipios
         const urlMunicipios = 'https://servidor-mapas.onrender.com/api/municipios';
         fetch(urlMunicipios)
             .then(response => response.json())
@@ -206,9 +208,7 @@
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
                             fillOpacity: 0.45      
                         },
-                        onEachFeature: function (feature, layer) { 
-                            layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); 
-                        }
+                        onEachFeature: function (feature, layer) { layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); }
                     }).addTo(capasMunicipios[nombreMuni]);
                 });
 
@@ -217,21 +217,18 @@
                     "Mis Puntos Guardados": grupoPOIs
                 };
                 for (const nombre in capasMunicipios) { listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre]; }
-
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
             });
 
 
         // ========================================================
-        // GESTIÓN DEL BOTÓN FLOTANTE DEL MARCADOR (AÑADIR / EDITAR / BORRAR)
+        // GESTIÓN DEL BOTÓN MARCADOR CON COLORES SEPARADOS
         // ========================================================
         const btnPoi = document.getElementById('btn-herramienta-poi');
         L.DomEvent.disableClickPropagation(btnPoi);
 
         btnPoi.onclick = function(e) {
             if (e) e.stopPropagation();
-
-            // Seguridad: Si la medición está encendida, se recomienda apagarla al usar POIs
             if (modoPoiActivo) {
                 modoPoiActivo = false;
                 btnPoi.classList.remove('activo-poi');
@@ -241,15 +238,25 @@
             }
         };
 
-        // Capturar clics en el mapa para colocar los marcadores
         map.on('click', function(e) {
             if (!modoPoiActivo) return;
 
+            // 🟢 NUEVO: Añadido selector de colores en el formulario de creación
             const contenidoCrear = `
                 <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
                     <strong style="display:block; margin-bottom:8px; color:#333;">Nuevo Punto</strong>
                     <input type="text" id="crear-titulo" placeholder="Título (Ej. Iglesia)" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
-                    <textarea id="crear-desc" placeholder="Descripción..." rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
+                    <textarea id="crear-desc" placeholder="Descripción..." rows="2" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;"></textarea>
+                    
+                    <label style="font-size:11px; color:#666; display:block; margin-bottom:3px;">Color del Marcador:</label>
+                    <select id="crear-color" style="width:100%; padding:5px; margin-bottom:10px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                        <option value="marcador-azul">🔵 Azul (Estándar)</option>
+                        <option value="marcador-rojo">🔴 Rojo</option>
+                        <option value="marcador-verde">🟢 Verde</option>
+                        <option value="marcador-oro">🟡 Oro / Amarillo</option>
+                        <option value="marcador-violeta">🟣 Violeta</option>
+                    </select>
+
                     <button id="btn-guardar-poi" style="width:100%; background:#28a745; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Fijar Punto</button>
                 </div>
             `;
@@ -262,9 +269,16 @@
                     btnGuardar.onclick = function() {
                         const titulo = document.getElementById('crear-titulo').value || 'Punto sin título';
                         const desc = document.getElementById('crear-desc').value || 'Sin descripción';
+                        const colorClase = document.getElementById('crear-color').value;
 
+                        // Crear marcador
                         const nuevoMarcador = L.marker(e.latlng).addTo(grupoPOIs);
-                        nuevoMarcador.datosPOI = { titulo: titulo, descripcion: desc };
+                        
+                        // Guardar datos y el color seleccionado dentro del objeto
+                        nuevoMarcador.datosPOI = { titulo: titulo, descripcion: desc, claseColor: colorClase };
+
+                        // 🟢 Aplicar el filtro de color de forma inmediata a la imagen del marcador
+                        nuevoMarcador.getElement().classList.add(colorClase);
 
                         function renderizarPopupLectura(marcador) {
                             const htmlLectura = `
@@ -283,11 +297,13 @@
                         renderizarPopupLectura(nuevoMarcador);
 
                         nuevoMarcador.on('popupopen', function() {
+                            // Borrar
                             const btnBorrar = document.querySelector('.btn-borrar-poi');
                             if (btnBorrar) { 
                                 btnBorrar.onclick = function() { grupoPOIs.removeLayer(nuevoMarcador); }; 
                             }
 
+                            // Editar (Ahora también permite re-editar el color)
                             const btnEditar = document.querySelector('.btn-editar-poi');
                             if (btnEditar) {
                                 btnEditar.onclick = function() {
@@ -295,7 +311,17 @@
                                         <div style="font-family: 'Segoe UI', sans-serif; min-width: 180px;">
                                             <strong style="display:block; margin-bottom:6px; color:#333;">Editar Datos</strong>
                                             <input type="text" id="edit-titulo" value="${nuevoMarcador.datosPOI.titulo}" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
-                                            <textarea id="edit-desc" rows="2" style="width:100%; padding:5px; margin-bottom:8px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;">${nuevoMarcador.datosPOI.descripcion}</textarea>
+                                            <textarea id="edit-desc" rows="2" style="width:100%; padding:5px; margin-bottom:6px; border-radius:4px; border:1px solid #ccc; font-size:12px; resize:none;">${nuevoMarcador.datosPOI.descripcion}</textarea>
+                                            
+                                            <label style="font-size:11px; color:#666; display:block; margin-bottom:3px;">Cambiar Color:</label>
+                                            <select id="edit-color" style="width:100%; padding:5px; margin-bottom:10px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                                                <option value="marcador-azul" ${nuevoMarcador.datosPOI.claseColor === 'marcador-azul' ? 'selected' : ''}>🔵 Azul</option>
+                                                <option value="marcador-rojo" ${nuevoMarcador.datosPOI.claseColor === 'marcador-rojo' ? 'selected' : ''}>🔴 Rojo</option>
+                                                <option value="marcador-verde" ${nuevoMarcador.datosPOI.claseColor === 'marcador-verde' ? 'selected' : ''}>🟢 Verde</option>
+                                                <option value="marcador-oro" ${nuevoMarcador.datosPOI.claseColor === 'marcador-oro' ? 'selected' : ''}>🟡 Oro</option>
+                                                <option value="marcador-violeta" ${nuevoMarcador.datosPOI.claseColor === 'marcador-violeta' ? 'selected' : ''}>🟣 Violeta</option>
+                                            </select>
+
                                             <button id="btn-actualizar-poi" style="width:100%; background:#ff9500; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">Actualizar</button>
                                         </div>
                                     `;
@@ -305,8 +331,17 @@
                                         const btnActualizar = document.getElementById('btn-actualizar-poi');
                                         if (btnActualizar) {
                                             btnActualizar.onclick = function() {
+                                                // Remover color anterior de las clases CSS del elemento HTML
+                                                nuevoMarcador.getElement().classList.remove(nuevoMarcador.datosPOI.claseColor);
+
+                                                // Guardar nuevos datos
                                                 nuevoMarcador.datosPOI.titulo = document.getElementById('edit-titulo').value || 'Sin título';
                                                 nuevoMarcador.datosPOI.descripcion = document.getElementById('edit-desc').value || 'Sin descripción';
+                                                nuevoMarcador.datosPOI.claseColor = document.getElementById('edit-color').value;
+                                                
+                                                // Asignar el nuevo filtro de color al elemento HTML
+                                                nuevoMarcador.getElement().classList.add(nuevoMarcador.datosPOI.claseColor);
+
                                                 renderizarPopupLectura(nuevoMarcador);
                                                 map.closePopup();
                                             };
