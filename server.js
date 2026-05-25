@@ -79,6 +79,38 @@ app.get('/api/municipios', async (req, res) => {
   }
 });
 
+// RUTA POST PARA GUARDAR UN NUEVO PUNTO
+app.post('/api/pois', async (req, res) => {
+    const { titulo, descripcion, color, latitud, longitud } = req.body;
+    
+    try {
+        const query = `
+            INSERT INTO puntos_interes (titulo, descripcion, color, latitud, longitud) 
+            VALUES ($1, $2, $3, $4, $5) 
+            RETURNING *;
+        `;
+        const values = [titulo, descripcion, color, latitud, longitud];
+        const result = await pool.query(query, values);
+        
+        // Es CRUCIAL devolver el punto creado con el ID que le asignó la BD
+        res.status(201).json(result.rows[0]); 
+    } catch (error) {
+        console.error("Error al insertar en la base de datos:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
+// TAMBIÉN NECESITARÁS LA RUTA GET PARA LEERLOS AL REFRESCAR
+app.get('/api/pois', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM puntos_interes ORDER BY fecha_creacion DESC;');
+        res.json(result.rows);
+    } catch (error) {
+        console.error("Error al obtener puntos:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
+    }
+});
+
 // Levantar el servidor
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
