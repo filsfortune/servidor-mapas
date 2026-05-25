@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Portal de Datos Urbanos - La Habana</title>
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-measure@3.1.0/dist/leaflet-measure.css">
+    <link rel="stylesheet" href="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.css" />
+    <script src="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -171,39 +170,20 @@
         }).addTo(map);
 
         // ========================================================
-        // ⚙️ CONFIGURACIÓN DE MEDICIÓN 100% ESTÁTICA (SIN MOVIMIENTO)
+        // 🟢 NUEVA MEDICIÓN ULTRA PRECISA (SIN DESPLAZAMIENTOS)
         // ========================================================
-        const opcionesMedicion = new L.Control.Measure({
-            position: 'bottomleft',
-            primaryLengthUnit: 'meters',
-            secondaryLengthUnit: 'kilometers',
-            primaryAreaUnit: 'sqmeters',
-            activeColor: '#ff9500',   /* Línea elástica naranja */
-            completedColor: '#10b981', /* Línea verde al terminar */
-            localization: 'es',
-            popupOptions: { 
-                className: 'leaflet-measure-popup', 
-                autoPan: false, // Desactiva el movimiento por el globo de texto
-                closeButton: false
-            }
-        });
-        map.addControl(opcionesMedicion);
-
-        // 🔴 TRUCO DEFINITIVO: Bloquear el movimiento parásito del mapa al medir
-        map.on('measurestart', function() {
-            map.dragging.disable(); // Evita que arrastres el mapa sin querer
-            map.touchZoom.disable(); // Evita zooms raros con los dedos
-            map.doubleClickZoom.disable(); // Evita que el doble clic haga zoom
-            map.boxZoom.disable();
-        });
-
-        map.on('measurefinish', function() {
-            // Devolverle la vida y el movimiento normal al mapa cuando terminas
-            map.dragging.enable();
-            map.touchZoom.enable();
-            map.doubleClickZoom.enable();
-            map.boxZoom.enable();
-        });
+        L.control.polylineMeasure({
+            position: 'bottomleft',            // Ubicación junto al zoom
+            unit: 'metres',                     // Unidad métrica por defecto (m/km)
+            showBearings: false,                // No mostrar ángulos/rumbos para no saturar
+            clearMeasurementsOnStop: false,     // Mantener la línea al apagar el botón si se desea
+            showUnitControl: false,             // No mostrar el botón de cambiar a millas/pies
+            tooltipTextDragandDrop: 'Arrastra para mover',
+            tooltipTextDelete: 'Clic para borrar punto',
+            tooltipTextMove: 'Clic para añadir punto',
+            tooltipTextResume: 'Clic para continuar la línea',
+            tooltipTextAdd: 'Clic para iniciar'
+        }).addTo(map);
 
         // CONTENEDORES DE CAPAS
         const grupoProvincia = L.layerGroup().addTo(map); 
