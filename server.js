@@ -101,6 +101,29 @@ app.post('/api/pois', async (req, res) => {
     }
 });
 
+// ========================================================
+// RUTA 2: BORRAR UN PUNTO PERMANENTEMENTE DE NEON
+// ========================================================
+app.delete('/api/pois/:id', async (req, res) => {
+    const { id } = req.params; // Esto lee el ID que el mapa manda en la URL (ej: /api/pois/5)
+
+    try {
+        const query = 'DELETE FROM puntos_interes WHERE id = $1;';
+        const result = await pool.query(query, [id]);
+
+        // Si la base de datos no encontró ninguna fila con ese ID
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: "El marcador no existe en la base de datos." });
+        }
+
+        // Si todo sale bien, respondemos con éxito
+        res.json({ mensaje: "Marcador eliminado correctamente de la base de datos cloud." });
+    } catch (error) {
+        console.error("Error al borrar el punto en Neon:", error);
+        res.status(500).json({ error: "Error interno del servidor al eliminar el marcador" });
+    }
+});
+
 // TAMBIÉN NECESITARÁS LA RUTA GET PARA LEERLOS AL REFRESCAR
 app.get('/api/pois', async (req, res) => {
     try {
