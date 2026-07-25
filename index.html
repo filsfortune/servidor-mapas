@@ -140,15 +140,7 @@
         let gpsMarker = null;
         let gpsCircle = null;
 
-        function onLocationFound(e) {
-            if (gpsMarker) { map.removeLayer(gpsMarker); }
-            if (gpsCircle) { map.removeLayer(gpsCircle); }
-            gpsCircle = L.circle(e.latlng, e.accuracy).addTo(map);
-            gpsMarker = L.circleMarker(e.latlng, {
-                color: '#fff', fillColor: '#007AFF', fillOpacity: 1, radius: 8, weight: 3
-            }).addTo(map);
-        }
-        map.on('locationfound', onLocationFound);
+        
 
         // Mapa base
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
