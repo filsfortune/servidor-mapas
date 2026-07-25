@@ -45,8 +45,8 @@ app.get('/api/mapa', async (req, res) => {
   }
 });
 
-// 3. NUEVA RUTA: MUNICIPIOS (Corregida y completa)
-app.get('/api/municipios', async (req, res) => {
+// 3. NUEVA RUTA: DISTRITOS (Corregida y completa)
+app.get('/api/distritos', async (req, res) => {
   try {
     // CORRECCIÓN: Añadimos 'fid' y 'nombre' dentro del SELECT para que la base de datos los devuelva
     const query = `
@@ -55,7 +55,7 @@ app.get('/api/municipios', async (req, res) => {
         fid, 
         nombre, 
         ST_AsGeoJSON(geom)::json as geometry 
-      FROM municipios
+      FROM distritos
     `;
     
     const result = await pool.query(query);
@@ -75,7 +75,7 @@ app.get('/api/municipios', async (req, res) => {
     
     res.json(geojson);
   } catch (err) {
-    console.error('Error en la API de municipios:', err);
+    console.error('Error en la API de distritos:', err);
     res.status(500).json({ error: err.message });
   }
 });

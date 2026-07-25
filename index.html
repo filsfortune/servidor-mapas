@@ -113,8 +113,8 @@
 <body>
 
     <div class="info-panel">
-        <h1>Mapa de La Habana</h1>
-        <p>Municipios</p>
+        <h1>Mapa de Madrid</h1>
+        <p>Distritos</p>
     </div>
 
     <div id="map"></div>
@@ -146,7 +146,7 @@
         // Contenedores de capas
         const grupoProvincia = L.layerGroup().addTo(map); 
         const grupoPOIs = L.layerGroup().addTo(map); 
-        const capasMunicipios = {}; 
+        const capasDistritos = {}; 
         let controlCapas; 
 
         let modoPoiActivo = false;
@@ -176,14 +176,14 @@
                 map.fitBounds(capaProvincia.getBounds());
             });
 
-        // Cargar municipios y configurar el control de capas
-        fetch(`${API_BASE_URL}/municipios`)
+        // Cargar distritos y configurar el control de capas
+        fetch(`${API_BASE_URL}/distritos`)
             .then(response => response.json())
             .then(data => {
-                const nombresMunicipios = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
+                const nombresDistritos = [...new Set(data.features.map(f => f.properties.nombre))].filter(Boolean);
 
-                nombresMunicipios.forEach(nombreMuni => {
-                    capasMunicipios[nombreMuni] = L.layerGroup().addTo(map);
+                nombresDistritos.forEach(nombreMuni => {
+                    capasDistritos[nombreMuni] = L.layerGroup().addTo(map);
                     L.geoJSON(data, {
                         filter: function(feature) { return feature.properties.nombre === nombreMuni; },
                         style: {
@@ -191,15 +191,15 @@
                             fillColor: '#' + Math.floor((Math.abs(Math.sin(nombreMuni.charCodeAt(0))) * 16777215) % 16777215).toString(16).padStart(6, '0'),
                             fillOpacity: 0.45      
                         },
-                        onEachFeature: function (feature, layer) { layer.bindPopup(`<strong>Municipio:</strong> ${nombreMuni}`); }
-                    }).addTo(capasMunicipios[nombreMuni]);
+                        onEachFeature: function (feature, layer) { layer.bindPopup(`<strong>Distrito:</strong> ${nombreMuni}`); }
+                    }).addTo(capasDistritos[nombreMuni]);
                 });
 
                 const listaControles = {
                     "Límite Provincial": grupoProvincia,
                     "Mis Puntos Guardados": grupoPOIs
                 };
-                for (const nombre in capasMunicipios) { listaControles[`Municipio: ${nombre}`] = capasMunicipios[nombre]; }
+                for (const nombre in capasDistritos) { listaControles[`Distrito: ${nombre}`] = capasDistritos[nombre]; }
                 controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
 
                 // 🟢 CARGAR LOS PUNTOS DESDE LA BASE DE DATOS AL INICIAR
