@@ -407,6 +407,20 @@
                 }
             }, 100);
         });
+
+        document.addEventListener('DOMContentLoaded', () => {
+    // Comprobar si el navegador ya tiene permiso concedido
+    if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+            if (result.state === 'granted') {
+                // Si el usuario ya dio permiso anteriormente, inicia automáticamente
+                iniciarGeolocalizacion();
+            }
+        });
+    }
+});
+
+        
     </script>
 </body>
 </html>
