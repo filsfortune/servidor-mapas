@@ -118,6 +118,7 @@
     </div>
 
     <div id="map"></div>
+    <div id="mapa-interactivo"></div>
 
     <div id="wrapper-herramientas" class="contenedor-herramientas-izq">
         <button id="btn-herramienta-poi" class="btn-flotante" title="Activar/Desactivar Marcador">📍</button>
@@ -134,9 +135,7 @@
         const map = L.map('map').setView([40.416775, -3.703790], 12);
         map.zoomControl.setPosition('topright');
 
-    
 
-        
 
         // Mapa base
         const mapaBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -406,6 +405,14 @@
                     };
                 }
             }, 100);
+
+            // ❌ CÓDIGO ACTUAL (Muestra y rastrea la ubicación)
+map.locate({ setView: true, maxZoom: 16, watch: true });
+
+function onLocationFound(e) {
+    L.marker(e.latlng).addTo(map).bindPopup("Estás aquí");
+}
+map.on('locationfound', onLocationFound);
 
             
         });
