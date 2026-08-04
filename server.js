@@ -140,37 +140,7 @@ app.listen(PORT, () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
 
-// server.js
-const express = require('express');
-const app = express();
 
-// Middleware obligatorio para parsear el body en JSON
-app.use(express.json());
-
-// Endpoint para recibir las posiciones reportadas automáticamente
-app.post('/api/geolocalizacion', async (req, res) => {
-    const { latitud, longitud, precision } = req.body;
-
-    if (!latitud || !longitud) {
-        return res.status(400).json({ error: 'Faltan parámetros de coordenadas' });
-    }
-
-    try {
-        // Ejemplo de inserción en PostgreSQL con PostGIS si deseas guardar el rastro:
-        /*
-        await pool.query(
-            `INSERT INTO posiciones_usuario (geom, precision, fecha) 
-             VALUES (ST_SetSRID(ST_MakePoint($1, $2), 4326), $3, NOW())`,
-            [longitud, latitud, precision]
-        );
-        */
-
-        res.status(200).json({ status: 'ok', latitud, longitud });
-    } catch (err) {
-        console.error("Error procesando posición:", err);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
 
 // Exportamos la aplicación para compatibilidad
 module.exports = app;
