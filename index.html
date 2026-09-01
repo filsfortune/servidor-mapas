@@ -194,13 +194,7 @@
                     }).addTo(capasDistritos[nombreMuni]);
                 });
 
-                const listaControles = {
-                    "Límite Provincial": grupoProvincia,
-                    "Mis Puntos Guardados": grupoPOIs
-                };
-                for (const nombre in capasDistritos) { listaControles[`Distrito: ${nombre}`] = capasDistritos[nombre]; }
-                controlCapas = L.control.layers(null, listaControles, { collapsed: false }).addTo(map);
-
+               
                 // 🟢 CARGAR LOS PUNTOS DESDE LA BASE DE DATOS AL INICIAR
                 cargarPuntosDesdeBD();
             });
