@@ -86,6 +86,35 @@
             background-size: 22px 22px !important;
         }
 
+        /* Estilos para el punto azul de ubicación GPS */
+        .punto-azul-gps {
+            width: 16px;
+            height: 16px;
+            background-color: #1a73e8;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        .punto-azul-gps::after {
+            content: "";
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: rgba(26, 115, 232, 0.3);
+            animation: pulsar 2s infinite;
+        }
+
+        @keyframes pulsar {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+    </style>
+
         /* Clases CSS para cambiar el color de los marcadores de Leaflet */
         .marcador-rojo { filter: hue-rotate(140deg); }
         .marcador-verde { filter: hue-rotate(240deg); }
@@ -400,16 +429,51 @@
                 }
             }, 100);
 
-            // ❌ CÓDIGO ACTUAL (Muestra y rastrea la ubicación)
-map.locate({ setView: true, maxZoom: 16, watch: true });
+            });
 
-function onLocationFound(e) {
-    L.marker(e.latlng).addTo(map).bindPopup("Estás aquí");
-}
-map.on('locationfound', onLocationFound);
+           // ========================================================
+        // GEOLOCALIZACIÓN EN TIEMPO REAL (PUNTO AZUL GPS)
+        // ========================================================
+        let marcadorGPS = null;
+        let circuloPrecision = null;
 
-            
+        const iconoPuntoAzul = L.divIcon({
+            className: 'punto-azul-gps',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
         });
+
+        // Solicitar ubicación al GPS
+        map.locate({ setView: true, maxZoom: 16, watch: true, enableHighAccuracy: true });
+
+        map.on('locationfound', function(e) {
+            const radioPrecision = e.accuracy;
+
+            if (!marcadorGPS) {
+                // Crear el punto azul y la sombra de precisión
+                marcadorGPS = L.marker(e.latlng, { icon: iconoPuntoAzul }).addTo(map)
+                    .bindPopup("Estás aquí");
+                
+                circuloPrecision = L.circle(e.latlng, {
+                    radius: radioPrecision,
+                    color: '#1a73e8',
+                    fillColor: '#1a73e8',
+                    fillOpacity: 0.1,
+                    stroke: false
+                }).addTo(map);
+            } else {
+                // Actualizar las coordenadas si te mueves
+                marcadorGPS.setLatLng(e.latlng);
+                circuloPrecision.setLatLng(e.latlng);
+                circuloPrecision.setRadius(radioPrecision);
+            }
+        });
+
+        map.on('locationerror', function(e) {
+            console.warn("Acceso a la ubicación no disponible:", e.message);
+        });
+
+        
 
         
 
